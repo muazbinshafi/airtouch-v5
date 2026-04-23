@@ -316,6 +316,8 @@ export class GestureEngine {
     const isFist = !indexExt && !middleExt && !ringExt && !pinkyExt && !thumbExt;
     const isOpenPalm = fingerCount === 5;
     const isThumbsUp = thumbExt && !indexExt && !middleExt && !ringExt && !pinkyExt;
+    const isPinkyOnly = pinkyExt && !indexExt && !middleExt && !ringExt && !thumbExt;
+    const isFourFingers = indexExt && middleExt && ringExt && pinkyExt && !thumbExt;
     const isPointing = indexExt && !middleExt && !ringExt && !pinkyExt;
     const isThreePinch = pinch < this.config.clickThreshold &&
                          tmPinch < this.config.clickThreshold * 1.4 &&
