@@ -48,6 +48,14 @@ export class BrowserCursor {
   private shapeBase: ImageData | null = null;
   private accentColor = "var(--primary)";
 
+  // Pose-hold buffer for higher accuracy on static gestures. Tracks the
+  // currently-held configurable gesture, when it started, and when it last
+  // fired (per gesture). A pose must be sustained for `holdMs` and clear
+  // `cooldownMs` between fires.
+  private poseHeld: ConfigurableGesture | null = null;
+  private poseHeldSince = 0;
+  private poseFiredAt: Partial<Record<ConfigurableGesture, number>> = {};
+
   // Pull cursor from the active SensorPanel video rect so XY maps to the
   // visible camera frame the user sees. Falls back to viewport.
   private targetSelector = "#omnipoint-video";
