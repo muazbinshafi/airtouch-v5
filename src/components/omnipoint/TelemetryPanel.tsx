@@ -52,11 +52,14 @@ export function TelemetryPanel({ config, setConfig, bridgeUrl, setBridgeUrl, onR
           onChange={(v) => setConfig({ sensitivity: v })}
         />
         <Slider
-          label="SMOOTHING α"
-          min={0} max={1} step={0.01}
+          label="SMOOTHNESS (1€ cutoff)"
+          min={0.3} max={4} step={0.05}
           value={config.smoothingAlpha}
           onChange={(v) => setConfig({ smoothingAlpha: v })}
         />
+        <p className="font-mono text-[9px] text-muted-foreground/70 -mt-2 mb-2 leading-snug">
+          Lower = silky smooth (more lag). Higher = snappy (more jitter). 1.2 is balanced.
+        </p>
         <Slider
           label="CLICK THRESHOLD"
           min={0.01} max={0.08} step={0.001}
