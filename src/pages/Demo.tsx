@@ -11,6 +11,7 @@ import { HIDBridge } from "@/lib/omnipoint/HIDBridge";
 import { TelemetryStore } from "@/lib/omnipoint/TelemetryStore";
 import { ThemeSettings } from "@/components/ThemeSettings";
 import { PaintToolbar } from "@/components/omnipoint/PaintToolbar";
+import { GestureSettingsPanel } from "@/components/omnipoint/GestureSettingsPanel";
 import { useBrowserCursor } from "@/hooks/useBrowserCursor";
 
 const Demo = () => {
@@ -215,7 +216,8 @@ const Demo = () => {
           />
         )}
         {!showInit && (
-          <div className="absolute top-2 right-2 z-50">
+          <div className="absolute top-2 right-2 z-50 flex items-center gap-2">
+            <GestureSettingsPanel />
             <Link
               to="/"
               className="font-mono text-[10px] tracking-[0.3em] px-3 h-8 inline-flex items-center border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
