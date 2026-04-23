@@ -107,6 +107,9 @@ function Hero() {
                 <Hand className="w-4 h-4" />
                 See gesture guide
               </Link>
+              <Link to="/install" className="btn-ghost h-12 px-6 text-sm">
+                Install on phone
+              </Link>
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
               <Stat label="FPS" value="60" />
