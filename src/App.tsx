@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/lib/theme/ThemeContext";
 import Index from "./pages/Index.tsx";
 import Demo from "./pages/Demo.tsx";
 import GestureGuide from "./pages/GestureGuide.tsx";
+import Install from "./pages/Install.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/guide" element={<GestureGuide />} />
             <Route path="/demo" element={<Demo />} />
+            <Route path="/install" element={<Install />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
