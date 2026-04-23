@@ -206,7 +206,7 @@ const Demo = () => {
 
   return useMemo(
     () => (
-      <main className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
+      <main className="h-[100dvh] w-screen flex flex-col bg-background text-foreground overflow-hidden">
         <h1 className="sr-only">OmniPoint HCI — Live Sensor</h1>
         {!showInit && <StatusBar onEmergencyToggle={handleEmergencyToggle} />}
         {!showInit && (
@@ -219,11 +219,37 @@ const Demo = () => {
           />
         )}
         {!showInit && (
-          <div className="absolute top-2 right-2 z-50 flex items-center gap-2">
+          <div className="absolute top-2 right-2 z-50 flex items-center gap-1.5 sm:gap-2">
+            {/* On mobile/tablet the telemetry side-panel becomes a slide-up sheet */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button
+                  className="lg:hidden font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center gap-1.5 border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
+                  aria-label="Open telemetry panel"
+                >
+                  <Gauge className="w-3.5 h-3.5" />
+                  TELEMETRY
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                side="right"
+                className="w-[92vw] sm:w-[420px] p-0 overflow-y-auto bg-card"
+              >
+                <TelemetryPanel
+                  config={config}
+                  setConfig={setConfig}
+                  bridgeUrl={bridgeUrl}
+                  setBridgeUrl={setBridgeUrl}
+                  onReconnect={handleReconnect}
+                  onTestBridge={handleTestBridge}
+                  onOpenTroubleshooter={() => setTroubleshooterOpen(true)}
+                />
+              </SheetContent>
+            </Sheet>
             <GestureSettingsPanel />
             <Link
               to="/"
-              className="font-mono text-[10px] tracking-[0.3em] px-3 h-8 inline-flex items-center border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
+              className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
             >
               ← HOME
             </Link>
@@ -235,22 +261,25 @@ const Demo = () => {
           <div className="flex-1 min-w-0 flex flex-col">
             <SensorPanel onSetOrigin={handleSetOrigin} />
           </div>
-          <TelemetryPanel
-            config={config}
-            setConfig={setConfig}
-            bridgeUrl={bridgeUrl}
-            setBridgeUrl={setBridgeUrl}
-            onReconnect={handleReconnect}
-            onTestBridge={handleTestBridge}
-            onOpenTroubleshooter={() => setTroubleshooterOpen(true)}
-          />
+          {/* Side panel only visible on lg+ — replaced by the Sheet on mobile */}
+          <div className="hidden lg:flex">
+            <TelemetryPanel
+              config={config}
+              setConfig={setConfig}
+              bridgeUrl={bridgeUrl}
+              setBridgeUrl={setBridgeUrl}
+              onReconnect={handleReconnect}
+              onTestBridge={handleTestBridge}
+              onOpenTroubleshooter={() => setTroubleshooterOpen(true)}
+            />
+          </div>
         </div>
         {showInit && (
           <div className="flex-1 relative">
             <div className="absolute top-3 left-3 z-50">
               <Link
                 to="/"
-                className="font-mono text-[10px] tracking-[0.3em] px-3 h-8 inline-flex items-center border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
+                className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
               >
                 ← HOME
               </Link>
