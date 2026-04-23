@@ -10,6 +10,7 @@ import { GestureEngine, defaultConfig, type EngineConfig } from "@/lib/omnipoint
 import { HIDBridge } from "@/lib/omnipoint/HIDBridge";
 import { TelemetryStore } from "@/lib/omnipoint/TelemetryStore";
 import { ThemeSettings } from "@/components/ThemeSettings";
+import { PaintToolbar } from "@/components/omnipoint/PaintToolbar";
 import { useBrowserCursor } from "@/hooks/useBrowserCursor";
 
 const Demo = () => {
@@ -267,10 +268,18 @@ const Demo = () => {
           setBridgeUrl={setBridgeUrl}
           onTestBridge={handleTestBridge}
         />
+        {!showInit && controlMode === "browser" && browserCursor.mode === "draw" && (
+          <PaintToolbar
+            onClear={browserCursor.clearDrawing}
+            onUndo={browserCursor.undo}
+            onRedo={browserCursor.redo}
+            onSave={browserCursor.saveAsPng}
+          />
+        )}
         <ThemeSettings variant="floating" />
       </main>
     ),
-    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing],
+    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
   );
 };
 

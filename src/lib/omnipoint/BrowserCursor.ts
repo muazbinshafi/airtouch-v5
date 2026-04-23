@@ -6,6 +6,7 @@
 // element is mutated in place inside an rAF loop.
 
 import { TelemetryStore, type GestureKind } from "./TelemetryStore";
+import { PaintStore, PaintHistory } from "./PaintStore";
 
 export type CursorMode = "off" | "pointer" | "draw";
 
@@ -31,7 +32,14 @@ export class BrowserCursor {
   private lastClickAt = 0;
   private lastRightClickAt = 0;
   private lastScrollAt = 0;
+  private lastBackAt = 0;
+  private lastZoomAt = 0;
+  private lastNextAt = 0;
   private lastDrawPt: DrawSegment | null = null;
+  // Shape preview state — when drawing a shape we hold the start anchor
+  // and a snapshot of the canvas to redraw the rubber-band on each frame.
+  private shapeStart: DrawSegment | null = null;
+  private shapeBase: ImageData | null = null;
   private accentColor = "var(--primary)";
 
   // Pull cursor from the active SensorPanel video rect so XY maps to the
@@ -300,11 +308,37 @@ export class BrowserCursor {
     window.scrollBy({ top: deltaY, behavior: "auto" });
   }
 
-  private drawTo(x: number, y: number) {
+  private applyPenStyle() {
+    if (!this.drawCtx) return;
+    const { color, size, alpha, composite, tool } = PaintStore.get();
+    const ctx = this.drawCtx;
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = composite;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = tool === "highlighter" ? Math.max(size, 14) : size;
+  }
+
+  private resetCtx() {
+    if (!this.drawCtx) return;
+    this.drawCtx.globalAlpha = 1;
+    this.drawCtx.globalCompositeOperation = "source-over";
+  }
+
+  private snapshotCanvas(): ImageData | null {
+    if (!this.drawCtx) return null;
+    return this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+  }
+
+  private restoreCanvas(img: ImageData | null) {
+    if (!this.drawCtx || !img) return;
+    this.drawCtx.putImageData(img, 0, 0);
+  }
+
+  private drawFreehand(x: number, y: number) {
     if (!this.drawCtx) return;
     const ctx = this.drawCtx;
-    ctx.strokeStyle = `hsl(var(--primary))`;
-    ctx.lineWidth = 3;
+    this.applyPenStyle();
     if (this.lastDrawPt) {
       ctx.beginPath();
       ctx.moveTo(this.lastDrawPt.x, this.lastDrawPt.y);
@@ -312,12 +346,75 @@ export class BrowserCursor {
       ctx.stroke();
     } else {
       ctx.beginPath();
-      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = `hsl(var(--primary))`;
+      ctx.arc(x, y, ctx.lineWidth / 2, 0, Math.PI * 2);
       ctx.fill();
     }
     this.lastDrawPt = { x, y };
+    this.resetCtx();
     void this.accentColor;
+  }
+
+  private drawShapePreview(x: number, y: number) {
+    if (!this.drawCtx || !this.shapeStart) return;
+    this.restoreCanvas(this.shapeBase);
+    this.applyPenStyle();
+    const ctx = this.drawCtx;
+    const { tool } = PaintStore.get();
+    const sx = this.shapeStart.x;
+    const sy = this.shapeStart.y;
+    ctx.beginPath();
+    if (tool === "rect") {
+      ctx.strokeRect(sx, sy, x - sx, y - sy);
+    } else if (tool === "ellipse") {
+      const cx = (sx + x) / 2;
+      const cy = (sy + y) / 2;
+      const rx = Math.abs(x - sx) / 2;
+      const ry = Math.abs(y - sy) / 2;
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (tool === "line") {
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    } else if (tool === "arrow") {
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      const head = Math.max(10, ctx.lineWidth * 3);
+      const ang = Math.atan2(y - sy, x - sx);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - head * Math.cos(ang - Math.PI / 7), y - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(x - head * Math.cos(ang + Math.PI / 7), y - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+    }
+    this.resetCtx();
+  }
+
+  undo() {
+    if (!this.drawCtx) return;
+    const prev = PaintHistory.undo();
+    if (prev) {
+      this.restoreCanvas(prev);
+    } else {
+      this.drawCtx.clearRect(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+    }
+  }
+
+  redo() {
+    const next = PaintHistory.redo();
+    if (next) this.restoreCanvas(next);
+  }
+
+  saveAsPng() {
+    const url = this.drawCanvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `omnipoint-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   private setLabel(text: string) {
@@ -358,15 +455,43 @@ export class BrowserCursor {
     this.setRingState(g);
 
     if (this.mode === "draw") {
-      // In draw mode any pinch / drag paints, open palm clears.
-      if (g === "click" || g === "drag" || snap.pinchDistance < 0.05) {
-        this.drawTo(x, y);
-      } else if (g === "open_palm") {
-        this.clearDrawing();
+      const isDrawing = g === "click" || g === "drag" || snap.pinchDistance < 0.05;
+      const tool = PaintStore.get().tool;
+      const isShape = PaintStore.isShape(tool);
+
+      if (isShape) {
+        if (isDrawing) {
+          if (!this.shapeStart) {
+            const snapImg = this.snapshotCanvas();
+            if (snapImg) PaintHistory.push(snapImg);
+            this.shapeBase = snapImg;
+            this.shapeStart = { x, y };
+          }
+          this.drawShapePreview(x, y);
+        } else if (this.shapeStart) {
+          this.shapeStart = null;
+          this.shapeBase = null;
+        }
+        this.setLabel(isDrawing ? tool.toUpperCase() : `SHAPE · ${tool.toUpperCase()}`);
       } else {
-        this.lastDrawPt = null;
+        if (isDrawing) {
+          if (!this.lastDrawPt) {
+            const snapImg = this.snapshotCanvas();
+            if (snapImg) PaintHistory.push(snapImg);
+          }
+          this.drawFreehand(x, y);
+        } else {
+          this.lastDrawPt = null;
+        }
+        this.setLabel(isDrawing ? tool.toUpperCase() : `DRAW · ${tool.toUpperCase()}`);
       }
-      this.setLabel(g === "open_palm" ? "CLEAR" : g === "drag" || g === "click" ? "DRAW" : "DRAW MODE");
+
+      const now2 = performance.now();
+      if (g === "open_palm" && this.lastGesture !== "open_palm" && now2 - this.lastBackAt > 400) {
+        this.undo();
+        this.lastBackAt = now2;
+        this.setLabel("UNDO");
+      }
       this.lastGesture = g;
       return;
     }
@@ -378,14 +503,13 @@ export class BrowserCursor {
     const now = performance.now();
     const transitionedTo = (k: GestureKind) => g === k && this.lastGesture !== k;
 
-    // Drag — press on enter, release on leave
     if (g === "drag" && !this.isDown) {
       this.dispatchDown(target, x, y);
       this.isDown = true;
       this.setLabel("DRAG");
     } else if (this.isDown && g !== "drag") {
       this.dispatchUp(target);
-      this.dispatchClick(target, x, y); // treat drag-release as a click on the drop target
+      this.dispatchClick(target, x, y);
       this.isDown = false;
     }
 
@@ -404,18 +528,46 @@ export class BrowserCursor {
       this.dispatchWheel(target, x, y, delta);
       this.lastScrollAt = now;
       this.setLabel(g === "scroll_up" ? "SCROLL ↑" : "SCROLL ↓");
-    } else if (g === "open_palm") {
-      this.setLabel("HOVER");
+    } else if (transitionedTo("open_palm") && now - this.lastBackAt > 600) {
+      window.history.back();
+      this.lastBackAt = now;
+      this.setLabel("← BACK");
+    } else if (transitionedTo("thumbs_up") && now - this.lastZoomAt > 350) {
+      this.adjustZoom(0.1);
+      this.lastZoomAt = now;
+      this.setLabel("ZOOM +");
+    } else if (transitionedTo("pinky_only") && now - this.lastZoomAt > 350) {
+      this.adjustZoom(-0.1);
+      this.lastZoomAt = now;
+      this.setLabel("ZOOM −");
+    } else if (transitionedTo("four_fingers") && now - this.lastNextAt > 380) {
+      this.dispatchKey("ArrowRight", 39);
+      this.lastNextAt = now;
+      this.setLabel("NEXT →");
     } else if (g === "fist") {
       this.setLabel("HOLD");
     } else if (g === "point") {
       this.setLabel("");
-    } else if (g === "thumbs_up") {
-      this.setLabel("OK");
     } else if (g === "none") {
       this.setLabel("");
     }
 
     this.lastGesture = g;
   };
+
+  private adjustZoom(delta: number) {
+    const cur = parseFloat((document.body.style as CSSStyleDeclaration & { zoom?: string }).zoom || "1") || 1;
+    const next = Math.min(2, Math.max(0.5, cur + delta));
+    (document.body.style as CSSStyleDeclaration & { zoom?: string }).zoom = String(next);
+  }
+
+  private dispatchKey(key: string, keyCode: number) {
+    const target = document.activeElement ?? document.body;
+    const init = {
+      bubbles: true, cancelable: true, composed: true,
+      key, code: key, keyCode, which: keyCode,
+    } as KeyboardEventInit;
+    target.dispatchEvent(new KeyboardEvent("keydown", init));
+    target.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
 }
