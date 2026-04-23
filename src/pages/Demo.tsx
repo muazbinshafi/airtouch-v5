@@ -279,7 +279,7 @@ const Demo = () => {
         <ThemeSettings variant="floating" />
       </main>
     ),
-    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing],
+    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
   );
 };
 
