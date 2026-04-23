@@ -51,7 +51,7 @@ async function pullFromCloud(userId: string) {
   }
 
   const local = GestureProfileStore.get();
-  const cloudProfiles = (data as CloudRow[]).map(rowToProfile);
+  const cloudProfiles = ((data ?? []) as unknown as CloudRow[]).map(rowToProfile);
   const cloudIds = new Set(cloudProfiles.map((p) => p.id));
 
   // Keep built-ins; replace user profiles with cloud copies; preserve any
@@ -62,7 +62,7 @@ async function pullFromCloud(userId: string) {
   );
 
   const merged = [...builtins, ...cloudProfiles, ...localOnly];
-  const activeRow = (data as CloudRow[]).find((r) => r.is_active);
+  const activeRow = ((data ?? []) as unknown as CloudRow[]).find((r) => r.is_active);
   const activeId = activeRow?.id ?? local.activeId ?? builtins[0]?.id ?? null;
 
   // Mute pushes while we mutate the store from the pull.
@@ -86,9 +86,9 @@ async function upsertProfile(
       id: p.id,
       user_id: userId,
       name: p.name,
-      settings: p.settings,
+      settings: p.settings as unknown as Record<string, unknown>,
       is_active: isActive,
-    },
+    } as never,
     { onConflict: "id" },
   );
   if (error) console.warn("[cloudProfileSync] upsert failed:", error.message);
@@ -105,12 +105,12 @@ async function pushAll(userId: string) {
       id: p.id,
       user_id: userId,
       name: p.name,
-      settings: p.settings,
+      settings: p.settings as unknown as Record<string, unknown>,
       is_active: p.id === local.activeId,
     }));
     const { error } = await supabase
       .from("gesture_profiles")
-      .upsert(rows, { onConflict: "id" });
+      .upsert(rows as never, { onConflict: "id" });
     if (error) console.warn("[cloudProfileSync] bulk upsert failed:", error.message);
   }
 
