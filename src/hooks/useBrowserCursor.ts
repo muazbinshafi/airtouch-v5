@@ -1,6 +1,6 @@
 // useBrowserCursor — owns a single BrowserCursor instance with mode control.
 // The cursor overlay is mounted in document.body once; this hook just
-// coordinates lifecycle + exposes setMode/clearDrawing to the UI.
+// coordinates lifecycle + exposes setMode/clearDrawing/undo/redo/save to UI.
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserCursor, type CursorMode } from "@/lib/omnipoint/BrowserCursor";
@@ -19,8 +19,6 @@ export function useBrowserCursor(active: boolean, initialMode: CursorMode = "poi
       cursor.detach();
       ref.current = null;
     };
-    // We deliberately only re-mount when `active` toggles; mode changes are
-    // pushed into the existing instance via the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
@@ -30,6 +28,9 @@ export function useBrowserCursor(active: boolean, initialMode: CursorMode = "poi
 
   const setMode = useCallback((m: CursorMode) => setModeState(m), []);
   const clearDrawing = useCallback(() => ref.current?.clearDrawing(), []);
+  const undo = useCallback(() => ref.current?.undo(), []);
+  const redo = useCallback(() => ref.current?.redo(), []);
+  const saveAsPng = useCallback(() => ref.current?.saveAsPng(), []);
 
-  return { mode, setMode, clearDrawing };
+  return { mode, setMode, clearDrawing, undo, redo, saveAsPng };
 }
