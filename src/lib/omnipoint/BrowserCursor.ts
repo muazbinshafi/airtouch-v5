@@ -539,22 +539,6 @@ export class BrowserCursor {
       this.dispatchWheel(target, x, y, delta);
       this.lastScrollAt = now;
       this.setLabel(g === "scroll_up" ? "SCROLL ↑" : "SCROLL ↓");
-    } else if (transitionedTo("open_palm") && now - this.lastBackAt > 600) {
-      window.history.back();
-      this.lastBackAt = now;
-      this.setLabel("← BACK");
-    } else if (transitionedTo("thumbs_up") && now - this.lastZoomAt > 350) {
-      this.adjustZoom(0.1);
-      this.lastZoomAt = now;
-      this.setLabel("ZOOM +");
-    } else if (transitionedTo("pinky_only") && now - this.lastZoomAt > 350) {
-      this.adjustZoom(-0.1);
-      this.lastZoomAt = now;
-      this.setLabel("ZOOM −");
-    } else if (transitionedTo("four_fingers") && now - this.lastNextAt > 380) {
-      this.dispatchKey("ArrowRight", 39);
-      this.lastNextAt = now;
-      this.setLabel("NEXT →");
     } else if (g === "fist") {
       this.setLabel("HOLD");
     } else if (g === "point") {
@@ -562,6 +546,131 @@ export class BrowserCursor {
     } else if (g === "none") {
       this.setLabel("");
     }
+
+    // Configurable static-pose gestures (open_palm / thumbs_up / pinky_only
+    // / four_fingers / fist) — gated by hold-time + cooldown for accuracy
+    // and routed through the user's gesture bindings.
+    this.tryFireStaticGesture(g, snap.confidence, "pointer");
+
+    this.lastGesture = g;
+  };
+
+  /**
+   * Buffer-then-fire dispatcher for static poses. Requires the same pose
+   * to be sustained for `holdMs * accuracyBias` AND respects a per-pose
+   * cooldown window. Returns true if an action fired this frame.
+   */
+  private tryFireStaticGesture(
+    g: GestureKind,
+    confidence: number,
+    surface: "pointer" | "draw",
+  ): boolean {
+    const now = performance.now();
+    const settings = GestureSettingsStore.get();
+
+    if (!isConfigurable(g)) {
+      this.poseHeld = null;
+      this.poseHeldSince = 0;
+      return false;
+    }
+    const binding = settings.bindings[g];
+    if (!binding.enabled) return false;
+    if (confidence < settings.minConfidence) return false;
+
+    // Track sustained pose
+    if (this.poseHeld !== g) {
+      this.poseHeld = g;
+      this.poseHeldSince = now;
+      return false;
+    }
+
+    const requiredHold = binding.holdMs * settings.accuracyBias;
+    if (now - this.poseHeldSince < requiredHold) return false;
+
+    const lastFired = this.poseFiredAt[g] ?? 0;
+    if (now - lastFired < binding.cooldownMs) return false;
+
+    const action = surface === "pointer" ? binding.pointerAction : binding.drawAction;
+
+    // Honor palm-scope: open_palm should only fire in the configured surface.
+    if (g === "open_palm") {
+      const scope = settings.palmScope;
+      if (scope === "pointer_only" && surface !== "pointer") return false;
+      if (scope === "draw_only" && surface !== "draw") return false;
+    }
+
+    if (action === "none") return false;
+
+    this.executeAction(action);
+    this.poseFiredAt[g] = now;
+    return true;
+  }
+
+  private executeAction(action: GestureAction) {
+    switch (action) {
+      case "back":
+        window.history.back();
+        this.setLabel("← BACK");
+        break;
+      case "forward":
+        window.history.forward();
+        this.setLabel("FORWARD →");
+        break;
+      case "undo":
+        if (this.mode === "draw") this.undo();
+        else this.dispatchKey("z", 90, { ctrl: true });
+        this.setLabel("UNDO");
+        break;
+      case "redo":
+        if (this.mode === "draw") this.redo();
+        else this.dispatchKey("y", 89, { ctrl: true });
+        this.setLabel("REDO");
+        break;
+      case "zoom_in":
+        this.adjustZoom(0.1);
+        this.setLabel("ZOOM +");
+        break;
+      case "zoom_out":
+        this.adjustZoom(-0.1);
+        this.setLabel("ZOOM −");
+        break;
+      case "next":
+        this.dispatchKey("ArrowRight", 39);
+        this.setLabel("NEXT →");
+        break;
+      case "prev":
+        this.dispatchKey("ArrowLeft", 37);
+        this.setLabel("← PREV");
+        break;
+      case "save":
+        if (this.mode === "draw") this.saveAsPng();
+        else this.dispatchKey("s", 83, { ctrl: true });
+        this.setLabel("SAVE");
+        break;
+      case "clear":
+        if (this.mode === "draw") this.clearDrawing();
+        this.setLabel("CLEAR");
+        break;
+      case "escape":
+        this.dispatchKey("Escape", 27);
+        this.setLabel("ESC");
+        break;
+      case "enter":
+        this.dispatchKey("Enter", 13);
+        this.setLabel("ENTER");
+        break;
+      case "space":
+        this.dispatchKey(" ", 32);
+        this.setLabel("SPACE");
+        break;
+      case "emergency_stop":
+        TelemetryStore.set({ emergencyStop: true });
+        this.setLabel("⛔ STOP");
+        break;
+      default:
+        break;
+    }
+  }
 
     this.lastGesture = g;
   };
