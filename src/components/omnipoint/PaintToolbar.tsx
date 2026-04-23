@@ -43,7 +43,7 @@ export function PaintToolbar({ onClear, onUndo, onRedo, onSave }: Props) {
   const setSize = (size: number) => PaintStore.set({ size });
 
   return (
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 panel backdrop-blur px-3 py-2 flex items-center gap-3 max-w-[95vw] flex-wrap justify-center">
+    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 panel backdrop-blur px-2 sm:px-3 py-2 flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-1rem)] flex-wrap justify-center overflow-y-auto max-h-[40vh]">
       <Group label="PENS">
         {PEN_TOOLS.map((t) => (
           <ToolBtn key={t.id} active={paint.tool === t.id} onClick={() => setTool(t.id)} title={t.label}>
@@ -161,7 +161,7 @@ function ToolBtn({
     <button
       onClick={onClick}
       title={title}
-      className={`w-8 h-8 grid place-items-center border transition-colors ${
+      className={`w-9 h-9 sm:w-8 sm:h-8 grid place-items-center border transition-colors touch-manipulation active:scale-95 ${
         active
           ? "border-primary text-primary bg-primary/10"
           : "hairline text-muted-foreground hover:text-foreground"
@@ -183,7 +183,7 @@ function ActionBtn({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`font-mono text-[10px] tracking-[0.2em] px-2 h-7 border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+      className={`font-mono text-[10px] tracking-[0.2em] px-3 h-9 sm:px-2 sm:h-7 border transition-colors disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation active:scale-95 ${
         tone === "danger"
           ? "hairline text-destructive hover:bg-destructive/10"
           : "hairline text-muted-foreground hover:text-foreground"

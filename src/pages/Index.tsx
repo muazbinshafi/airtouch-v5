@@ -107,6 +107,9 @@ function Hero() {
                 <Hand className="w-4 h-4" />
                 See gesture guide
               </Link>
+              <Link to="/install" className="btn-ghost h-12 px-6 text-sm">
+                Install on phone
+              </Link>
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
               <Stat label="FPS" value="60" />
@@ -475,9 +478,10 @@ function Footer() {
           <span className="font-display text-sm">OmniPoint HCI</span>
           <span className="text-xs text-muted-foreground">· Open source · MIT</span>
         </div>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+        <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
           <Link to="/demo" className="hover:text-foreground transition-colors">Demo</Link>
           <Link to="/guide" className="hover:text-foreground transition-colors">Guide</Link>
+          <Link to="/install" className="hover:text-foreground transition-colors">Install</Link>
           <a href="#quickstart" className="hover:text-foreground transition-colors">Docs</a>
           <a href="https://github.com/muazbinshafi/airtouch-v3" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1.5">
             <Github className="w-4 h-4" /> GitHub
