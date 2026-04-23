@@ -51,9 +51,15 @@ export class GestureEngine {
   private bridge: HIDBridge;
   public config: EngineConfig;
 
-  // EMA state for L4 + L8 (x,y,z)
-  private emaThumb: [number, number, number] | null = null;
-  private emaIndex: [number, number, number] | null = null;
+  // One-Euro filters for jitter-free thumb / index landmarks (3D each)
+  private fThumb = new OneEuroFilter2D(1.2, 0.015);
+  private fThumbZ = new OneEuroFilter2D(1.2, 0.015);
+  private fIndex = new OneEuroFilter2D(1.2, 0.015);
+  private fIndexZ = new OneEuroFilter2D(1.2, 0.015);
+  private smoothedThumb: [number, number, number] | null = null;
+  private smoothedIndex: [number, number, number] | null = null;
+  // Final cursor low-pass (after acceleration). Slightly snappier than landmarks.
+  private fCursor = new OneEuroFilter2D(2.0, 0.03);
 
   // Cursor state (smoothed, post-acceleration), normalized to active zone 0..1
   private cursor = { x: 0.5, y: 0.5 };
@@ -66,6 +72,13 @@ export class GestureEngine {
   private clickState: ClickState = "IDLE";
   private pinchStartTs = 0;
   private readonly debounceMs = 50;
+
+  // Gesture stability voting — require N consecutive frames of the same
+  // candidate gesture before committing. Eliminates 1-frame flickers.
+  private gestureCandidate: GestureKind = "none";
+  private gestureCandidateCount = 0;
+  private committedGesture: GestureKind = "none";
+  private readonly gestureStabilityFrames = 3;
 
   // Scroll state
   private lastScrollY: number | null = null;
@@ -83,9 +96,23 @@ export class GestureEngine {
     this.canvas = canvas;
     this.bridge = bridge;
     this.config = config;
+    this.applySmoothingParams();
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D context unavailable");
     this.ctx = ctx;
+  }
+
+  /** Map config.smoothingAlpha → One-Euro params for both landmark + cursor. */
+  private applySmoothingParams() {
+    const minCutoff = Math.max(0.3, Math.min(6, this.config.smoothingAlpha));
+    // beta scales gently with cutoff so fast motion is always followed.
+    const beta = 0.01 + minCutoff * 0.01;
+    this.fThumb.setParams(minCutoff, beta);
+    this.fThumbZ.setParams(minCutoff, beta);
+    this.fIndex.setParams(minCutoff, beta);
+    this.fIndexZ.setParams(minCutoff, beta);
+    // Cursor filter is always slightly snappier than landmarks.
+    this.fCursor.setParams(Math.min(6, minCutoff + 0.8), beta + 0.015);
   }
 
   async init(onProgress?: (msg: string) => void) {
