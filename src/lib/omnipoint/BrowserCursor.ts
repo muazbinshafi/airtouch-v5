@@ -672,20 +672,25 @@ export class BrowserCursor {
     }
   }
 
-    this.lastGesture = g;
-  };
-
   private adjustZoom(delta: number) {
     const cur = parseFloat((document.body.style as CSSStyleDeclaration & { zoom?: string }).zoom || "1") || 1;
     const next = Math.min(2, Math.max(0.5, cur + delta));
     (document.body.style as CSSStyleDeclaration & { zoom?: string }).zoom = String(next);
   }
 
-  private dispatchKey(key: string, keyCode: number) {
+  private dispatchKey(
+    key: string,
+    keyCode: number,
+    mods: { ctrl?: boolean; shift?: boolean; alt?: boolean; meta?: boolean } = {},
+  ) {
     const target = document.activeElement ?? document.body;
     const init = {
       bubbles: true, cancelable: true, composed: true,
       key, code: key, keyCode, which: keyCode,
+      ctrlKey: !!mods.ctrl,
+      shiftKey: !!mods.shift,
+      altKey: !!mods.alt,
+      metaKey: !!mods.meta,
     } as KeyboardEventInit;
     target.dispatchEvent(new KeyboardEvent("keydown", init));
     target.dispatchEvent(new KeyboardEvent("keyup", init));
