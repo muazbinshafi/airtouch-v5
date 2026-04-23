@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
-import { Hand, MousePointer2, Zap, Shield, Activity, Sparkles, ArrowRight, Play, Github, Cpu, Eye, Gauge } from "lucide-react";
+import {
+  Hand, MousePointer2, Zap, Shield, Activity, Sparkles, ArrowRight, Play, Github,
+  Cpu, Eye, Gauge, Smartphone, Palette, Settings2, Wand2, Layers, Download,
+} from "lucide-react";
 import { ThemeSettings, ThemeToggleQuick } from "@/components/ThemeSettings";
 
 const Index = () => {
   useEffect(() => {
-    document.title = "OmniPoint HCI — Touchless Gesture Control";
+    document.title = "OmniPoint HCI — Touchless Gesture Control for Web, Desktop & Mobile";
     const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
       let tag = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
       if (!tag) {
@@ -15,9 +18,16 @@ const Index = () => {
       }
       tag.content = content;
     };
-    setMeta("description", "Control your computer with hand gestures. 60 FPS MediaPipe vision, real OS cursor control via a tiny Linux daemon. Open source.");
+    setMeta(
+      "description",
+      "Control your computer or phone with hand gestures. 60 FPS MediaPipe vision, customizable bindings, paint mode, cross-platform OS bridge, PWA installable. Open source.",
+    );
     setMeta("og:title", "OmniPoint HCI — Touchless Gesture Control", "property");
-    setMeta("og:description", "Hand gestures → real OS cursor. MediaPipe + Linux uinput bridge.", "property");
+    setMeta(
+      "og:description",
+      "Hand gestures → real cursor. MediaPipe vision · customizable profiles · paint toolbox · cross-platform bridge · installable on phone.",
+      "property",
+    );
   }, []);
 
   return (
@@ -25,8 +35,11 @@ const Index = () => {
       <Header />
       <Hero />
       <Marquee />
+      <WhatsNew />
       <Features />
       <Gestures />
+      <PaintShowcase />
+      <MobileSection />
       <Architecture />
       <Quickstart />
       <CTA />
