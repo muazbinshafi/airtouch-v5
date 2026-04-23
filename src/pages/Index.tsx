@@ -100,15 +100,16 @@ function Hero() {
           <div>
             <div className="chip mb-6">
               <Sparkles className="w-3 h-3" />
-              Now with 9 native gestures · MediaPipe powered
+              v2 · Customizable gestures · Paint mode · Mobile-ready
             </div>
             <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl leading-[1.02] text-foreground">
               Your hands are<br />
               the new <span className="text-gradient">mouse</span>.
             </h1>
             <p className="mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed">
-              OmniPoint turns any webcam into a precision input device. Move, click, drag and
-              scroll across your entire desktop — without touching a thing. 60 FPS vision, sub-frame latency.
+              OmniPoint turns any webcam into a precision input device. Move, click, draw and
+              scroll across your desktop or phone — without touching a thing. Customizable
+              gestures, named profiles, paint toolbox, sub-frame latency.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link to="/demo" className="btn-primary h-12 px-6 text-sm">
@@ -118,16 +119,17 @@ function Hero() {
               </Link>
               <Link to="/guide" className="btn-ghost h-12 px-6 text-sm">
                 <Hand className="w-4 h-4" />
-                See gesture guide
+                Gesture guide
               </Link>
               <Link to="/install" className="btn-ghost h-12 px-6 text-sm">
+                <Smartphone className="w-4 h-4" />
                 Install on phone
               </Link>
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
               <Stat label="FPS" value="60" />
               <Stat label="Latency" value="<16ms" />
-              <Stat label="Gestures" value="9" />
+              <Stat label="Gestures" value="11" />
               <Stat label="Open source" value="MIT" />
             </div>
           </div>
@@ -225,7 +227,17 @@ function HandGlyph() {
 }
 
 function Marquee() {
-  const items = ["MediaPipe Vision", "Linux uinput Bridge", "X11 + Wayland", "Chromium / Edge", "60 FPS @ 720p", "JSON over WebSocket", "Open Source · MIT"];
+  const items = [
+    "MediaPipe Vision",
+    "Cross-platform Bridge",
+    "Customizable bindings",
+    "Named profiles",
+    "Paint toolbox",
+    "PWA · Installable",
+    "Mobile-ready",
+    "60 FPS @ 720p",
+    "Open Source · MIT",
+  ];
   return (
     <section className="border-y border-border bg-secondary/40">
       <div className="mx-auto max-w-7xl px-6 py-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-2 text-xs font-mono tracking-wider text-muted-foreground">
@@ -240,14 +252,81 @@ function Marquee() {
   );
 }
 
+function WhatsNew() {
+  const updates = [
+    {
+      tag: "NEW",
+      icon: Settings2,
+      title: "Customizable gestures",
+      desc: "Remap any pose to any action. Per-mode bindings (pointer vs draw), hold-time tuning, and per-gesture cooldowns.",
+    },
+    {
+      tag: "NEW",
+      icon: Layers,
+      title: "Named profiles",
+      desc: "Save your tuning as profiles like 'Presenter' or 'Artist'. Switch instantly. Export & import as JSON.",
+    },
+    {
+      tag: "NEW",
+      icon: Wand2,
+      title: "Calibration wizard",
+      desc: "First-run guided setup: framing → origin → sensitivity. Re-run anytime from the toolbar.",
+    },
+    {
+      tag: "NEW",
+      icon: Palette,
+      title: "Paint toolbox",
+      desc: "MS Paint-style overlay. Pens, marker, highlighter, eraser, shapes, undo/redo, save as PNG.",
+    },
+    {
+      tag: "NEW",
+      icon: Smartphone,
+      title: "Mobile + PWA",
+      desc: "Touch-friendly UI, dvh viewport, slide-up telemetry sheet. Install to home screen on iOS & Android.",
+    },
+    {
+      tag: "NEW",
+      icon: Cpu,
+      title: "Cross-platform bridge",
+      desc: "Python WebSocket bridge using PyAutoGUI — works on Windows, macOS and Linux for real OS control.",
+    },
+  ];
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
+      <SectionHead
+        eyebrow="What's new"
+        title="Built up since v1."
+        subtitle="The latest pass focused on customization, paint, and getting OmniPoint running everywhere."
+      />
+      <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {updates.map((u) => (
+          <div
+            key={u.title}
+            className="panel p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="font-mono text-[9px] tracking-[0.25em] text-primary border border-primary/40 px-1.5 py-0.5">
+                {u.tag}
+              </span>
+              <u.icon className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <h3 className="font-display text-base text-foreground">{u.title}</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{u.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Features() {
   const features = [
     { icon: Eye, title: "Vision-first", desc: "MediaPipe Hand Landmarker tracks 21 keypoints per hand at 60 FPS, fully on-device." },
     { icon: Zap, title: "Sub-frame latency", desc: "Smoothed pointer with EMA filtering and velocity² acceleration. Feels instant." },
-    { icon: Cpu, title: "Real OS events", desc: "A 200-line Python daemon turns gestures into kernel-level mouse events via uinput." },
-    { icon: Shield, title: "Privacy by design", desc: "Camera stream never leaves the browser. The daemon only receives intent payloads." },
-    { icon: Gauge, title: "Live telemetry", desc: "On-screen HUD shows handedness, finger states, pinch distance, and confidence." },
-    { icon: Sparkles, title: "9 gestures", desc: "Point, pinch, right-click, drag, scroll, thumbs-up, palm, fist — all out of the box." },
+    { icon: Cpu, title: "Real OS events", desc: "A tiny Python bridge using PyAutoGUI turns gestures into kernel-level events on Win/macOS/Linux." },
+    { icon: Shield, title: "Privacy by design", desc: "Camera stream never leaves the browser. The bridge only receives intent payloads." },
+    { icon: Gauge, title: "Live telemetry", desc: "On-screen HUD shows FPS, inference latency, handedness, finger states and confidence." },
+    { icon: Settings2, title: "Customizable", desc: "Remap every static pose, save profiles, tune accuracy bias, hold-time and cooldowns." },
   ];
   return (
     <section id="features" className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
