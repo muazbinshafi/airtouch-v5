@@ -268,6 +268,14 @@ const Demo = () => {
           setBridgeUrl={setBridgeUrl}
           onTestBridge={handleTestBridge}
         />
+        {!showInit && controlMode === "browser" && browserCursor.mode === "draw" && (
+          <PaintToolbar
+            onClear={browserCursor.clearDrawing}
+            onUndo={browserCursor.undo}
+            onRedo={browserCursor.redo}
+            onSave={browserCursor.saveAsPng}
+          />
+        )}
         <ThemeSettings variant="floating" />
       </main>
     ),
