@@ -7,6 +7,12 @@
 
 import { TelemetryStore, type GestureKind } from "./TelemetryStore";
 import { PaintStore, PaintHistory } from "./PaintStore";
+import {
+  GestureSettingsStore,
+  isConfigurable,
+  type GestureAction,
+  type ConfigurableGesture,
+} from "./GestureSettings";
 
 export type CursorMode = "off" | "pointer" | "draw";
 
