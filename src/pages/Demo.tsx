@@ -17,6 +17,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Gauge, Wand2 } from "lucide-react";
 import { CalibrationWizard } from "@/components/omnipoint/CalibrationWizard";
 import { PerformanceHUD } from "@/components/omnipoint/PerformanceHUD";
+import { GestureTour } from "@/components/omnipoint/GestureTour";
+import { HelpCircle } from "lucide-react";
 
 const Demo = () => {
   const [initialized, setInitialized] = useState(false);
@@ -26,6 +28,7 @@ const Demo = () => {
   const [error, setError] = useState<string | null>(null);
   const [troubleshooterOpen, setTroubleshooterOpen] = useState(false);
   const [calibrationOpen, setCalibrationOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
 
   const [config, setConfigState] = useState<EngineConfig>(defaultConfig);
   const [bridgeUrl, setBridgeUrl] = useState("ws://localhost:8765");
@@ -250,6 +253,14 @@ const Demo = () => {
             </Sheet>
             <GestureSettingsPanel />
             <button
+              onClick={() => setTourOpen(true)}
+              title="Show gesture guide"
+              className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center gap-1.5 border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              GUIDE
+            </button>
+            <button
               onClick={() => setCalibrationOpen(true)}
               title="Re-run calibration"
               className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center gap-1.5 border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
@@ -331,9 +342,16 @@ const Demo = () => {
             onClose={() => setCalibrationOpen(false)}
           />
         )}
+        {!showInit && (
+          <GestureTour
+            forceOpen={tourOpen}
+            onClose={() => setTourOpen(false)}
+            autoShow
+          />
+        )}
       </main>
     ),
-    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, calibrationOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
+    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, calibrationOpen, tourOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
   );
 };
 
