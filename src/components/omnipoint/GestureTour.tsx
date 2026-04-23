@@ -1,18 +1,25 @@
 // GestureTour — a friendly, step-by-step pop-up tour that teaches new users
-// which hand gesture does what. Shown automatically the first time the
-// sensor comes online; users can skip or replay it. Persisted in
-// localStorage so it doesn't nag returning users.
+// which hand gesture does what.
 //
-// Visual: a centered card with a large gesture illustration (emoji + label),
-// a progress dots row, and prev/next/skip controls. A subtle backdrop
-// dimmer focuses attention without blocking the live sensor underneath
-// (pointer-events stay on the dialog only).
+// "Try it now" practice mode (per step):
+//   Each step declares a `match` predicate against the live TelemetrySnapshot.
+//   When the user clicks "Try it now" we:
+//     1) Show a pulsing prompt with the target gesture.
+//     2) Subscribe to the TelemetryStore and check `match` on every tick.
+//     3) When the match holds for the step's required dwell window, mark
+//        the step as "passed", play a small success state, and auto-advance
+//        after a short celebratory pause.
+//   The "Done" step has no practice — it's just a celebration card.
+//
+// The tour itself stays informational by default; practice is opt-in per
+// step so users who just want to read can keep clicking Next.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft, ChevronRight, X, Hand, MousePointer2,
-  Pointer, Grab, Move, Sparkles, CheckCircle2,
+  Pointer, Grab, Move, Sparkles, CheckCircle2, Play, Loader2,
 } from "lucide-react";
+import { TelemetryStore, type TelemetrySnapshot } from "@/lib/omnipoint/TelemetryStore";
 
 const STORAGE_KEY = "omnipoint:gesture-tour-seen-v1";
 
@@ -22,6 +29,16 @@ interface Step {
   description: string;
   hint: string;
   Icon: typeof Hand;
+  /**
+   * Predicate against the live telemetry snapshot. When this returns true
+   * for `dwellMs` continuously, the step is considered "passed".
+   * Omit (or return undefined) for purely informational steps.
+   */
+  match?: (s: TelemetrySnapshot) => boolean;
+  /** How long the match must hold (ms). Default 350. */
+  dwellMs?: number;
+  /** Short instruction shown while practicing. */
+  practicePrompt?: string;
 }
 
 const STEPS: Step[] = [
@@ -32,6 +49,15 @@ const STEPS: Step[] = [
       "Hold up your index finger. Your fingertip becomes the cursor — move it around to navigate.",
     hint: "Try drawing a slow circle in the air.",
     Icon: MousePointer2,
+    practicePrompt: "Raise just your index finger and move it around.",
+    // Index extended, others (mostly) folded.
+    match: (s) =>
+      s.handPresent &&
+      s.fingersExtended[1] === true &&
+      s.fingersExtended[2] === false &&
+      s.fingersExtended[3] === false &&
+      s.fingersExtended[4] === false,
+    dwellMs: 500,
   },
   {
     emoji: "🤏",
@@ -40,6 +66,13 @@ const STEPS: Step[] = [
       "Bring your thumb and index finger together briefly to perform a click. Pinch twice for a double-click.",
     hint: "Quick, deliberate pinches work best.",
     Icon: Pointer,
+    practicePrompt: "Touch your thumb and index fingertip together.",
+    // Either the engine's gesture state machine fires "click", or the raw
+    // pinch distance is tight enough.
+    match: (s) =>
+      s.handPresent &&
+      (s.gesture === "click" || s.gesture === "drag" || s.pinchDistance < 0.045),
+    dwellMs: 120,
   },
   {
     emoji: "✊",
@@ -48,6 +81,10 @@ const STEPS: Step[] = [
       "Make a closed fist to grab. Move your hand while still in a fist to drag — open your hand to drop.",
     hint: "Great for selecting text or moving windows.",
     Icon: Grab,
+    practicePrompt: "Close your hand into a fist and hold it briefly.",
+    match: (s) =>
+      s.handPresent && (s.gesture === "fist" || s.fingerCount === 0),
+    dwellMs: 500,
   },
   {
     emoji: "✋",
@@ -56,6 +93,14 @@ const STEPS: Step[] = [
       "Show your open palm and move it up or down to scroll the page. Tilt left/right for horizontal scroll.",
     hint: "Slow movements scroll smoothly; fast ones jump.",
     Icon: Move,
+    practicePrompt: "Show your full open palm to the camera.",
+    match: (s) =>
+      s.handPresent &&
+      (s.gesture === "open_palm" ||
+        s.gesture === "scroll_up" ||
+        s.gesture === "scroll_down" ||
+        s.fingerCount >= 5),
+    dwellMs: 500,
   },
   {
     emoji: "🤙",
@@ -64,60 +109,132 @@ const STEPS: Step[] = [
       "Lift three fingers together to trigger custom gesture shortcuts you can configure in Settings.",
     hint: "Map your favorite hotkeys for instant access.",
     Icon: Sparkles,
+    practicePrompt: "Raise exactly three fingers (index, middle, ring).",
+    match: (s) => s.handPresent && s.fingerCount === 3,
+    dwellMs: 500,
   },
   {
     emoji: "🎉",
     title: "You're ready!",
     description:
-      "Open Settings any time to tune sensitivity and remap gestures. Press the help icon to replay this tour.",
+      "You've practiced every core gesture. Open Settings any time to tune sensitivity, and press the GUIDE button to replay this tour.",
     hint: "Have fun exploring — calibrate from the top bar if needed.",
     Icon: CheckCircle2,
   },
 ];
 
 interface GestureTourProps {
-  /** When true, force the tour open regardless of localStorage state. */
   forceOpen?: boolean;
-  /** Called when the tour is closed (skip or finish). */
   onClose?: () => void;
-  /** When true, show on mount only if user hasn't seen it before. */
   autoShow?: boolean;
 }
+
+type PracticeState = "idle" | "active" | "passed";
 
 export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTourProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const [practice, setPractice] = useState<PracticeState>("idle");
+  const [passed, setPassed] = useState<Record<number, boolean>>({});
 
-  // Decide whether to auto-open based on storage flag.
+  // Keep the latest "is this step matching" timestamp so we can require dwell.
+  const matchSinceRef = useRef<number | null>(null);
+  // Hold a short delay before auto-advancing after a pass so the user sees
+  // the success state.
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const current = STEPS[step];
+  const isLast = step === STEPS.length - 1;
+  const Icon = current.Icon;
+  const canPractice = !!current.match;
+
+  // ---------- open/close lifecycle ----------
   useEffect(() => {
     if (forceOpen) {
       setOpen(true);
       setStep(0);
+      setPractice("idle");
+      setPassed({});
       return;
     }
     if (!autoShow) return;
     try {
-      const seen = localStorage.getItem(STORAGE_KEY);
-      if (!seen) {
-        // Small delay so it doesn't pop the moment the camera lights up.
+      if (!localStorage.getItem(STORAGE_KEY)) {
         const t = setTimeout(() => setOpen(true), 600);
         return () => clearTimeout(t);
       }
     } catch {
-      /* storage unavailable — show anyway */
       setOpen(true);
     }
   }, [forceOpen, autoShow]);
 
-  // Sync open state with forceOpen toggling.
   useEffect(() => {
     if (forceOpen) {
       setOpen(true);
       setStep(0);
+      setPractice("idle");
+      setPassed({});
     }
   }, [forceOpen]);
 
-  // Keyboard navigation: ←/→ to move, Esc to skip.
+  // Reset practice state whenever we change steps.
+  useEffect(() => {
+    setPractice("idle");
+    matchSinceRef.current = null;
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+  }, [step]);
+
+  // ---------- practice subscription ----------
+  useEffect(() => {
+    if (!open || practice !== "active" || !current.match) return;
+    const dwell = current.dwellMs ?? 350;
+
+    const check = () => {
+      const snap = TelemetryStore.get();
+      const isMatch = current.match!(snap);
+      if (isMatch) {
+        if (matchSinceRef.current == null) {
+          matchSinceRef.current = performance.now();
+        } else if (performance.now() - matchSinceRef.current >= dwell) {
+          // Passed!
+          setPractice("passed");
+          setPassed((p) => ({ ...p, [step]: true }));
+          matchSinceRef.current = null;
+          // Auto-advance after a short celebration.
+          advanceTimerRef.current = setTimeout(() => {
+            advanceTimerRef.current = null;
+            handleNext();
+          }, 900);
+        }
+      } else {
+        matchSinceRef.current = null;
+      }
+    };
+
+    // Subscribe to telemetry changes AND poll on a short interval so we keep
+    // checking even if the snapshot doesn't change between frames (the engine
+    // emits frequently, but we want a guarantee).
+    const unsub = TelemetryStore.subscribe(check);
+    const interval = setInterval(check, 80);
+    check();
+    return () => {
+      unsub();
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, practice, step]);
+
+  // Cleanup on unmount.
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    };
+  }, []);
+
+  // ---------- keyboard ----------
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -130,11 +247,17 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step]);
 
+  // ---------- handlers ----------
   const handleClose = (markSeen: boolean) => {
     if (markSeen) {
       try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
     }
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
     setOpen(false);
+    setPractice("idle");
     onClose?.();
   };
 
@@ -148,11 +271,12 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
 
   const handlePrev = () => setStep((s) => Math.max(0, s - 1));
 
-  if (!open) return null;
+  const handleStartPractice = () => {
+    matchSinceRef.current = null;
+    setPractice("active");
+  };
 
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
-  const Icon = current.Icon;
+  if (!open) return null;
 
   return (
     <div
@@ -162,7 +286,7 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
       aria-labelledby="tour-title"
     >
       <div className="relative w-full max-w-md border border-border bg-card shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
-        {/* Skip button — always visible top-right */}
+        {/* Skip button */}
         <button
           onClick={() => handleClose(true)}
           className="absolute top-2.5 right-2.5 z-10 inline-flex items-center gap-1.5 px-2.5 h-8 font-mono text-[10px] tracking-[0.25em] text-muted-foreground hover:text-foreground border hairline bg-background/60 backdrop-blur transition-colors"
@@ -172,7 +296,7 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
           <X className="w-3 h-3" />
         </button>
 
-        {/* Header label */}
+        {/* Header */}
         <div className="px-5 pt-5 pb-1 flex items-center gap-2">
           <Hand className="w-3.5 h-3.5 text-primary" />
           <span className="font-mono text-[10px] tracking-[0.3em] text-emerald-glow">
@@ -183,8 +307,20 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
         {/* Body */}
         <div className="px-5 pt-3 pb-5">
           <div className="flex items-start gap-4">
-            <div className="shrink-0 w-20 h-20 rounded-xl bg-gradient-primary/10 border border-primary/20 grid place-items-center text-5xl select-none">
-              <span aria-hidden="true">{current.emoji}</span>
+            <div
+              className={`shrink-0 w-20 h-20 rounded-xl border grid place-items-center text-5xl select-none transition-all ${
+                practice === "active"
+                  ? "border-primary/60 bg-primary/15 animate-pulse"
+                  : practice === "passed" || passed[step]
+                    ? "border-[hsl(var(--success))] bg-[hsl(var(--success))]/10"
+                    : "border-primary/20 bg-gradient-primary/10"
+              }`}
+            >
+              {practice === "passed" ? (
+                <CheckCircle2 className="w-10 h-10 text-[hsl(var(--success))]" />
+              ) : (
+                <span aria-hidden="true">{current.emoji}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h2
@@ -200,12 +336,35 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
             </div>
           </div>
 
-          <div className="mt-4 px-3 py-2 border-l-2 border-primary/40 bg-primary/5">
-            <p className="text-xs text-foreground/80">
-              <span className="font-mono text-[10px] tracking-[0.25em] text-primary mr-2">TIP</span>
-              {current.hint}
-            </p>
-          </div>
+          {/* Practice / hint band */}
+          {practice === "active" && current.practicePrompt ? (
+            <div className="mt-4 px-3 py-2.5 border border-primary/40 bg-primary/10 flex items-center gap-2.5">
+              <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+              <p className="text-xs text-foreground flex-1">
+                <span className="font-mono text-[10px] tracking-[0.25em] text-primary mr-2">
+                  TRY IT
+                </span>
+                {current.practicePrompt}
+              </p>
+            </div>
+          ) : practice === "passed" ? (
+            <div className="mt-4 px-3 py-2.5 border border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/10 flex items-center gap-2.5 animate-in fade-in zoom-in-95 duration-300">
+              <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
+              <p className="text-xs text-foreground flex-1">
+                <span className="font-mono text-[10px] tracking-[0.25em] text-[hsl(var(--success))] mr-2">
+                  NICE!
+                </span>
+                Gesture detected — moving on…
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 px-3 py-2 border-l-2 border-primary/40 bg-primary/5">
+              <p className="text-xs text-foreground/80">
+                <span className="font-mono text-[10px] tracking-[0.25em] text-primary mr-2">TIP</span>
+                {current.hint}
+              </p>
+            </div>
+          )}
 
           {/* Progress dots */}
           <div className="mt-5 flex items-center justify-center gap-1.5">
@@ -217,16 +376,18 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
                 className={`h-1.5 rounded-full transition-all ${
                   i === step
                     ? "w-6 bg-primary"
-                    : i < step
-                      ? "w-1.5 bg-primary/60"
-                      : "w-1.5 bg-border hover:bg-muted-foreground/40"
+                    : passed[i]
+                      ? "w-1.5 bg-[hsl(var(--success))]"
+                      : i < step
+                        ? "w-1.5 bg-primary/60"
+                        : "w-1.5 bg-border hover:bg-muted-foreground/40"
                 }`}
               />
             ))}
           </div>
 
           {/* Controls */}
-          <div className="mt-5 flex items-center gap-2">
+          <div className="mt-5 flex items-center gap-2 flex-wrap">
             <button
               onClick={handlePrev}
               disabled={step === 0}
@@ -242,6 +403,25 @@ export function GestureTour({ forceOpen, onClose, autoShow = true }: GestureTour
               Skip guide
             </button>
             <div className="flex-1" />
+
+            {canPractice && practice === "idle" && !passed[step] && (
+              <button
+                onClick={handleStartPractice}
+                className="h-10 px-3 inline-flex items-center gap-1.5 border border-primary/40 text-primary hover:bg-primary/10 text-sm font-medium transition-colors"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                Try it now
+              </button>
+            )}
+            {canPractice && practice === "active" && (
+              <button
+                onClick={() => setPractice("idle")}
+                className="h-10 px-3 inline-flex items-center gap-1.5 border border-border text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Stop
+              </button>
+            )}
+
             <button
               onClick={handleNext}
               className="h-10 px-4 inline-flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
