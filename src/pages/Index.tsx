@@ -396,18 +396,156 @@ function Gestures() {
   );
 }
 
+function PaintShowcase() {
+  const tools = ["Pen", "Marker", "Highlighter", "Eraser", "Line", "Rect", "Ellipse", "Arrow"];
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
+      <SectionHead
+        eyebrow="Paint mode"
+        title="Draw in the air."
+        subtitle="A pinch becomes a stroke. Switch to draw mode and the whole viewport becomes a canvas."
+      />
+      <div className="mt-12 grid lg:grid-cols-[1.2fr_1fr] gap-8 items-center">
+        <div className="panel-elevated p-6 bg-mesh">
+          <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.25em] text-muted-foreground mb-4">
+            <Palette className="w-3.5 h-3.5 text-primary" />
+            TOOLBOX · DRAW MODE
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {tools.map((t) => (
+              <div
+                key={t}
+                className="border hairline px-3 h-10 flex items-center justify-center font-mono text-[11px] tracking-[0.18em] text-foreground bg-card/40"
+              >
+                {t}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-6 gap-1.5 mt-3">
+            {["#000", "#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#fff", "#78716c", "#6366f1"].map((c) => (
+              <span key={c} className="h-7 border border-border" style={{ backgroundColor: c }} />
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-4 text-xs font-mono tracking-wider text-muted-foreground">
+            <span>↶ UNDO · ↷ REDO</span>
+            <span>⤓ SAVE PNG</span>
+            <span>✕ CLEAR</span>
+          </div>
+        </div>
+        <div>
+          <h3 className="font-display text-2xl text-foreground">Sketch with your hand</h3>
+          <p className="mt-3 text-muted-foreground leading-relaxed">
+            Pinch and move to draw. Open palm undoes. Pinky-only clears. Four
+            fingers saves to PNG. Every gesture in draw mode is remappable in the
+            <span className="font-mono text-foreground"> GESTURES</span> panel.
+          </p>
+          <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              Highlighter, marker, eraser + 4 shape tools
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              Per-stroke undo/redo (30 step history)
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              Custom color picker + 12 presets
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              One-click save as PNG
+            </li>
+          </ul>
+          <Link to="/demo" className="btn-primary h-11 px-5 text-sm mt-6 inline-flex">
+            <Play className="w-4 h-4 fill-current" />
+            Try draw mode
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MobileSection() {
+  return (
+    <section className="border-y border-border bg-secondary/30">
+      <div className="mx-auto max-w-7xl px-6 py-24 lg:py-32 grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <div className="chip mb-4">
+            <Smartphone className="w-3 h-3" />
+            Mobile-ready
+          </div>
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-foreground leading-[1.1]">
+            Works on your <span className="text-gradient">phone</span>, too.
+          </h2>
+          <p className="mt-4 text-muted-foreground text-lg">
+            Touch-first controls, dvh viewport, slide-up telemetry sheet, and a
+            full PWA install path. Use the front camera, gesture in the air, and
+            the floating cursor still drives the page.
+          </p>
+          <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Installable on iOS & Android via PWA</li>
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Capacitor build path for native packaging</li>
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Touch-friendly 36px tap targets, swipe-friendly sheets</li>
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Offline asset caching for MediaPipe runtime</li>
+          </ul>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link to="/install" className="btn-primary h-11 px-5 text-sm">
+              <Download className="w-4 h-4" />
+              Install on phone
+            </Link>
+            <Link to="/demo" className="btn-ghost h-11 px-5 text-sm">
+              Open mobile demo
+            </Link>
+          </div>
+        </div>
+        <div className="relative flex justify-center">
+          <div className="absolute -inset-12 bg-gradient-primary opacity-20 blur-3xl rounded-full" />
+          <div className="relative w-[260px] h-[520px] rounded-[36px] border-4 border-foreground/15 bg-card shadow-2xl overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-7 bg-background flex items-center justify-center">
+              <div className="w-20 h-4 rounded-full bg-foreground/20" />
+            </div>
+            <div className="absolute inset-0 pt-7 flex flex-col">
+              <div className="px-3 py-3 border-b hairline flex items-center justify-between font-mono text-[9px] tracking-[0.25em] text-muted-foreground">
+                <span>OMNIPOINT</span>
+                <span className="text-[hsl(var(--success))]">● LIVE</span>
+              </div>
+              <div className="flex-1 dot-grid relative">
+                <div className="absolute inset-3 border hairline grid place-items-center">
+                  <Hand className="w-12 h-12 text-primary anim-pulse-soft" strokeWidth={1.5} />
+                </div>
+              </div>
+              <div className="border-t hairline px-3 py-2 flex items-center justify-around">
+                {["POINT", "DRAW", "OFF"].map((t, i) => (
+                  <span
+                    key={t}
+                    className={`font-mono text-[9px] tracking-[0.2em] ${i === 0 ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Architecture() {
   return (
     <section id="architecture" className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
       <SectionHead
         eyebrow="Architecture"
-        title="Browser sees. Daemon acts."
-        subtitle="A clean two-process design. The web app handles vision; a tiny native bridge handles HID."
+        title="Browser sees. Bridge acts."
+        subtitle="A clean two-process design. The web app handles vision; a tiny cross-platform Python bridge handles HID."
       />
       <div className="mt-14 grid lg:grid-cols-[1fr_auto_1fr] gap-6 items-stretch">
         <ArchBox
           icon={Eye}
-          title="Browser (Chromium)"
+          title="Browser (any modern)"
           lines={["Webcam + MediaPipe", "Gesture state machine", "60 FPS canvas loop", "Live telemetry HUD"]}
         />
         <div className="hidden lg:flex flex-col items-center justify-center gap-2">
@@ -419,14 +557,14 @@ function Architecture() {
         </div>
         <ArchBox
           icon={Cpu}
-          title="Linux Bridge Daemon"
-          lines={["python-uinput (HID)", "Moves real OS cursor", "Click / drag / scroll", "Heartbeat + kill switch"]}
+          title="Cross-platform Bridge"
+          lines={["PyAutoGUI (Win/macOS/Linux)", "Moves real OS cursor", "Click / drag / scroll / keys", "Heartbeat + kill switch"]}
         />
       </div>
       <div className="mt-12 grid sm:grid-cols-3 gap-4">
         <FilePill path="src/lib/omnipoint/GestureEngine.ts" note="Vision + state machine" />
         <FilePill path="src/lib/omnipoint/HIDBridge.ts" note="WebSocket + heartbeat" />
-        <FilePill path="bridge/omnipoint_bridge.py" note="uinput daemon (X11 + Wayland)" />
+        <FilePill path="bridge/omnipoint_bridge.py" note="PyAutoGUI bridge · cross-platform" />
       </div>
     </section>
   );
