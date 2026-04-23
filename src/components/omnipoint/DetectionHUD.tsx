@@ -12,8 +12,10 @@ const GESTURE_META: Record<GestureKind, { label: string; tone: "ok" | "warn" | "
   scroll_up:   { label: "SCROLL ▲",     tone: "ok" },
   scroll_down: { label: "SCROLL ▼",     tone: "ok" },
   thumbs_up:   { label: "THUMBS UP",    tone: "ok" },
-  open_palm:   { label: "OPEN PALM",    tone: "warn" },
+  open_palm:   { label: "OPEN PALM · UNDO/BACK", tone: "warn" },
   fist:        { label: "FIST",         tone: "danger" },
+  pinky_only:  { label: "PINKY · ZOOM −", tone: "ok" },
+  four_fingers:{ label: "FOUR · NEXT →",  tone: "ok" },
 };
 
 /**
