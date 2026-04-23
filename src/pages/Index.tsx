@@ -82,6 +82,12 @@ function Header() {
           </a>
           <ThemeToggleQuick />
           <ThemeSettings variant="inline" />
+          <Link
+            to="/auth"
+            className="hidden sm:inline-flex items-center justify-center h-10 px-3 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            Sign in
+          </Link>
           <Link to="/demo" className="btn-primary h-10 px-4 text-sm">
             <Play className="w-3.5 h-3.5 fill-current" />
             Launch demo
