@@ -32,7 +32,14 @@ export class BrowserCursor {
   private lastClickAt = 0;
   private lastRightClickAt = 0;
   private lastScrollAt = 0;
+  private lastBackAt = 0;
+  private lastZoomAt = 0;
+  private lastNextAt = 0;
   private lastDrawPt: DrawSegment | null = null;
+  // Shape preview state — when drawing a shape we hold the start anchor
+  // and a snapshot of the canvas to redraw the rubber-band on each frame.
+  private shapeStart: DrawSegment | null = null;
+  private shapeBase: ImageData | null = null;
   private accentColor = "var(--primary)";
 
   // Pull cursor from the active SensorPanel video rect so XY maps to the
