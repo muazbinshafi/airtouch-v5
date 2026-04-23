@@ -337,6 +337,14 @@ export class GestureEngine {
       gesture = "thumbs_up";
       this.clickState = "IDLE";
       this.lastScrollY = null;
+    } else if (isPinkyOnly) {
+      gesture = "pinky_only";
+      this.clickState = "IDLE";
+      this.lastScrollY = null;
+    } else if (isFourFingers) {
+      gesture = "four_fingers";
+      this.clickState = "IDLE";
+      this.lastScrollY = null;
     } else if (isThreePinch) {
       gesture = "right_click";
       this.clickState = "IDLE";
