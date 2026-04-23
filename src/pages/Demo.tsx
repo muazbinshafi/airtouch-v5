@@ -14,7 +14,6 @@ import { PaintToolbar } from "@/components/omnipoint/PaintToolbar";
 import { GestureSettingsPanel } from "@/components/omnipoint/GestureSettingsPanel";
 import { useBrowserCursor } from "@/hooks/useBrowserCursor";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Gauge } from "lucide-react";
 
 const Demo = () => {

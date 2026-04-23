@@ -25,7 +25,7 @@ export function ControlModeBar({
   const t = useTelemetry();
   const live = t.initialized && t.handPresent;
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 panel px-2 py-1.5 backdrop-blur">
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 sm:gap-2 panel px-1.5 sm:px-2 py-1 sm:py-1.5 backdrop-blur max-w-[calc(100vw-1rem)] flex-wrap justify-center">
       <Pill
         active={controlMode === "browser"}
         onClick={() => onControlModeChange("browser")}
@@ -65,7 +65,7 @@ export function ControlModeBar({
           {cursorMode === "draw" && (
             <button
               onClick={onClearDrawing}
-              className="font-mono text-[10px] tracking-[0.2em] px-2 h-7 border hairline text-muted-foreground hover:text-foreground"
+              className="font-mono text-[10px] tracking-[0.2em] px-2.5 h-9 sm:h-7 border hairline text-muted-foreground hover:text-foreground active:bg-muted/40 touch-manipulation"
             >
               ✕ CLEAR
             </button>
@@ -96,7 +96,7 @@ function Pill({
     <button
       onClick={onClick}
       title={title}
-      className={`font-mono text-[10px] tracking-[0.2em] px-2.5 h-7 border transition-colors ${
+      className={`font-mono text-[10px] tracking-[0.2em] px-3 h-9 sm:px-2.5 sm:h-7 border transition-colors touch-manipulation active:scale-95 ${
         active
           ? "border-primary text-primary bg-primary/10"
           : "hairline text-muted-foreground hover:text-foreground"
