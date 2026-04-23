@@ -43,7 +43,7 @@ export function PaintToolbar({ onClear, onUndo, onRedo, onSave }: Props) {
   const setSize = (size: number) => PaintStore.set({ size });
 
   return (
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 panel backdrop-blur px-3 py-2 flex items-center gap-3 max-w-[95vw] flex-wrap justify-center">
+    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 panel backdrop-blur px-2 sm:px-3 py-2 flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-1rem)] flex-wrap justify-center overflow-y-auto max-h-[40vh]">
       <Group label="PENS">
         {PEN_TOOLS.map((t) => (
           <ToolBtn key={t.id} active={paint.tool === t.id} onClick={() => setTool(t.id)} title={t.label}>
