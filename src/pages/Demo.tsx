@@ -17,6 +17,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Gauge, Wand2 } from "lucide-react";
 import { CalibrationWizard } from "@/components/omnipoint/CalibrationWizard";
 import { PerformanceHUD } from "@/components/omnipoint/PerformanceHUD";
+import { GestureTour } from "@/components/omnipoint/GestureTour";
+import { HelpCircle } from "lucide-react";
 
 const Demo = () => {
   const [initialized, setInitialized] = useState(false);
@@ -26,6 +28,7 @@ const Demo = () => {
   const [error, setError] = useState<string | null>(null);
   const [troubleshooterOpen, setTroubleshooterOpen] = useState(false);
   const [calibrationOpen, setCalibrationOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
 
   const [config, setConfigState] = useState<EngineConfig>(defaultConfig);
   const [bridgeUrl, setBridgeUrl] = useState("ws://localhost:8765");
