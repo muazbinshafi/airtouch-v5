@@ -10,6 +10,7 @@ import { GestureEngine, defaultConfig, type EngineConfig } from "@/lib/omnipoint
 import { HIDBridge } from "@/lib/omnipoint/HIDBridge";
 import { TelemetryStore } from "@/lib/omnipoint/TelemetryStore";
 import { ThemeSettings } from "@/components/ThemeSettings";
+import { PaintToolbar } from "@/components/omnipoint/PaintToolbar";
 import { useBrowserCursor } from "@/hooks/useBrowserCursor";
 
 const Demo = () => {
