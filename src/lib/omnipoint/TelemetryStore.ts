@@ -12,7 +12,9 @@ export type GestureKind =
   | "scroll_down"
   | "thumbs_up"
   | "open_palm"
-  | "fist";
+  | "fist"
+  | "pinky_only"
+  | "four_fingers";
 export type BridgeProbe = "idle" | "probing" | "ok" | "failed";
 export type Handedness = "none" | "Left" | "Right";
 
