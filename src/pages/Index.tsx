@@ -59,13 +59,14 @@ function Header() {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="font-display text-[15px] text-foreground">OmniPoint</span>
-            <span className="font-mono text-[9px] tracking-[0.25em] text-muted-foreground -mt-0.5">HCI · v1.0</span>
+            <span className="font-mono text-[9px] tracking-[0.25em] text-muted-foreground -mt-0.5">HCI · v2.0</span>
           </div>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">Features</a>
           <a href="#gestures" className="hover:text-foreground transition-colors">Gestures</a>
           <Link to="/guide" className="hover:text-foreground transition-colors">Guide</Link>
+          <Link to="/bridge" className="hover:text-foreground transition-colors">Bridge</Link>
           <a href="#architecture" className="hover:text-foreground transition-colors">How it works</a>
           <a href="#quickstart" className="hover:text-foreground transition-colors">Docs</a>
         </nav>
