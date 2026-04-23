@@ -1,9 +1,12 @@
 // GestureSettingsPanel — slide-over sheet that lets users remap gesture
-// bindings, tune accuracy, and choose where the open-palm shortcut applies.
+// bindings, tune accuracy, manage profiles, and choose where the open-palm
+// shortcut applies.
 
 import { useState } from "react";
-import { Settings2, RotateCcw } from "lucide-react";
+import { Settings2, RotateCcw, Save, Plus, Trash2, Download, Upload } from "lucide-react";
 import { useGestureSettings } from "@/hooks/useGestureSettings";
+import { useGestureProfiles } from "@/hooks/useGestureProfiles";
+import { GestureProfileStore } from "@/lib/omnipoint/GestureProfiles";
 import {
   GestureSettingsStore,
   ACTION_LABELS,
@@ -42,6 +45,39 @@ const GESTURES: ConfigurableGesture[] = [
 export function GestureSettingsPanel() {
   const [open, setOpen] = useState(false);
   const settings = useGestureSettings();
+  const profilesState = useGestureProfiles();
+  const activeProfile = profilesState.profiles.find((p) => p.id === profilesState.activeId);
+
+  const handleSaveAs = () => {
+    const name = window.prompt("Name this profile:", "My profile");
+    if (name === null) return;
+    GestureProfileStore.saveAsNew(name);
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([GestureProfileStore.exportJson()], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `omnipoint-gestures-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = async () => {
+      const f = input.files?.[0];
+      if (!f) return;
+      const text = await f.text();
+      GestureProfileStore.importJson(text);
+    };
+    input.click();
+  };
 
   return (
     <>
