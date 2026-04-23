@@ -165,21 +165,11 @@ export class GestureEngine {
   }
 
   setOrigin() {
-    if (!this.emaIndex) return;
-    this.originOffset.x = this.emaIndex[0] - 0.5;
-    this.originOffset.y = this.emaIndex[1] - 0.5;
+    if (!this.smoothedIndex) return;
+    this.originOffset.x = this.smoothedIndex[0] - 0.5;
+    this.originOffset.y = this.smoothedIndex[1] - 0.5;
   }
 
-  private ema(prev: [number, number, number] | null, cur: [number, number, number], alpha: number): [number, number, number] {
-    if (!prev) return cur;
-    // alpha = smoothing strength: higher = more smoothing => weight previous more.
-    const a = Math.min(1, Math.max(0, alpha));
-    return [
-      prev[0] * a + cur[0] * (1 - a),
-      prev[1] * a + cur[1] * (1 - a),
-      prev[2] * a + cur[2] * (1 - a),
-    ];
-  }
 
   private tick() {
     if (!this.landmarker || this.video.readyState < 2) return;
@@ -211,8 +201,14 @@ export class GestureEngine {
       this.processLandmarks(result, tNow);
     } else {
       confidence = 0;
-      this.emaIndex = null;
-      this.emaThumb = null;
+      this.smoothedIndex = null;
+      this.smoothedThumb = null;
+      this.fThumb.reset(); this.fThumbZ.reset();
+      this.fIndex.reset(); this.fIndexZ.reset();
+      this.fCursor.reset();
+      this.gestureCandidate = "none";
+      this.gestureCandidateCount = 0;
+      this.committedGesture = "none";
       this.prevIndex = null;
       this.clickState = "IDLE";
       this.lastScrollY = null;
