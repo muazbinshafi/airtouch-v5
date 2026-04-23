@@ -249,6 +249,14 @@ const Demo = () => {
               </SheetContent>
             </Sheet>
             <GestureSettingsPanel />
+            <button
+              onClick={() => setCalibrationOpen(true)}
+              title="Re-run calibration"
+              className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center gap-1.5 border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              CALIBRATE
+            </button>
             <Link
               to="/"
               className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
@@ -313,9 +321,19 @@ const Demo = () => {
           />
         )}
         <ThemeSettings variant="floating" />
+        {!showInit && <PerformanceHUD />}
+        {!showInit && (
+          <CalibrationWizard
+            forceOpen={calibrationOpen}
+            config={config}
+            setConfig={setConfig}
+            onSetOrigin={handleSetOrigin}
+            onClose={() => setCalibrationOpen(false)}
+          />
+        )}
       </main>
     ),
-    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
+    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, calibrationOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
   );
 };
 
