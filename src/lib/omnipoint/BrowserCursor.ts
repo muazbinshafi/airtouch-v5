@@ -500,12 +500,9 @@ export class BrowserCursor {
         this.setLabel(isDrawing ? tool.toUpperCase() : `DRAW · ${tool.toUpperCase()}`);
       }
 
-      const now2 = performance.now();
-      if (g === "open_palm" && this.lastGesture !== "open_palm" && now2 - this.lastBackAt > 400) {
-        this.undo();
-        this.lastBackAt = now2;
-        this.setLabel("UNDO");
-      }
+      // Static-pose actions in DRAW mode (undo/redo/clear/save/etc) come
+      // from the user's gesture bindings, gated by hold-time + cooldown.
+      this.tryFireStaticGesture(g, snap.confidence, "draw");
       this.lastGesture = g;
       return;
     }
