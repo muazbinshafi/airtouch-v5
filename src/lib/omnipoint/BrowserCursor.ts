@@ -455,15 +455,43 @@ export class BrowserCursor {
     this.setRingState(g);
 
     if (this.mode === "draw") {
-      // In draw mode any pinch / drag paints, open palm clears.
-      if (g === "click" || g === "drag" || snap.pinchDistance < 0.05) {
-        this.drawTo(x, y);
-      } else if (g === "open_palm") {
-        this.clearDrawing();
+      const isDrawing = g === "click" || g === "drag" || snap.pinchDistance < 0.05;
+      const tool = PaintStore.get().tool;
+      const isShape = PaintStore.isShape(tool);
+
+      if (isShape) {
+        if (isDrawing) {
+          if (!this.shapeStart) {
+            const snapImg = this.snapshotCanvas();
+            if (snapImg) PaintHistory.push(snapImg);
+            this.shapeBase = snapImg;
+            this.shapeStart = { x, y };
+          }
+          this.drawShapePreview(x, y);
+        } else if (this.shapeStart) {
+          this.shapeStart = null;
+          this.shapeBase = null;
+        }
+        this.setLabel(isDrawing ? tool.toUpperCase() : `SHAPE · ${tool.toUpperCase()}`);
       } else {
-        this.lastDrawPt = null;
+        if (isDrawing) {
+          if (!this.lastDrawPt) {
+            const snapImg = this.snapshotCanvas();
+            if (snapImg) PaintHistory.push(snapImg);
+          }
+          this.drawFreehand(x, y);
+        } else {
+          this.lastDrawPt = null;
+        }
+        this.setLabel(isDrawing ? tool.toUpperCase() : `DRAW · ${tool.toUpperCase()}`);
       }
-      this.setLabel(g === "open_palm" ? "CLEAR" : g === "drag" || g === "click" ? "DRAW" : "DRAW MODE");
+
+      const now2 = performance.now();
+      if (g === "open_palm" && this.lastGesture !== "open_palm" && now2 - this.lastBackAt > 400) {
+        this.undo();
+        this.lastBackAt = now2;
+        this.setLabel("UNDO");
+      }
       this.lastGesture = g;
       return;
     }
@@ -475,14 +503,13 @@ export class BrowserCursor {
     const now = performance.now();
     const transitionedTo = (k: GestureKind) => g === k && this.lastGesture !== k;
 
-    // Drag — press on enter, release on leave
     if (g === "drag" && !this.isDown) {
       this.dispatchDown(target, x, y);
       this.isDown = true;
       this.setLabel("DRAG");
     } else if (this.isDown && g !== "drag") {
       this.dispatchUp(target);
-      this.dispatchClick(target, x, y); // treat drag-release as a click on the drop target
+      this.dispatchClick(target, x, y);
       this.isDown = false;
     }
 
@@ -501,18 +528,46 @@ export class BrowserCursor {
       this.dispatchWheel(target, x, y, delta);
       this.lastScrollAt = now;
       this.setLabel(g === "scroll_up" ? "SCROLL ↑" : "SCROLL ↓");
-    } else if (g === "open_palm") {
-      this.setLabel("HOVER");
+    } else if (transitionedTo("open_palm") && now - this.lastBackAt > 600) {
+      window.history.back();
+      this.lastBackAt = now;
+      this.setLabel("← BACK");
+    } else if (transitionedTo("thumbs_up") && now - this.lastZoomAt > 350) {
+      this.adjustZoom(0.1);
+      this.lastZoomAt = now;
+      this.setLabel("ZOOM +");
+    } else if (transitionedTo("pinky_only") && now - this.lastZoomAt > 350) {
+      this.adjustZoom(-0.1);
+      this.lastZoomAt = now;
+      this.setLabel("ZOOM −");
+    } else if (transitionedTo("four_fingers") && now - this.lastNextAt > 380) {
+      this.dispatchKey("ArrowRight", 39);
+      this.lastNextAt = now;
+      this.setLabel("NEXT →");
     } else if (g === "fist") {
       this.setLabel("HOLD");
     } else if (g === "point") {
       this.setLabel("");
-    } else if (g === "thumbs_up") {
-      this.setLabel("OK");
     } else if (g === "none") {
       this.setLabel("");
     }
 
     this.lastGesture = g;
   };
+
+  private adjustZoom(delta: number) {
+    const cur = parseFloat((document.body.style as CSSStyleDeclaration & { zoom?: string }).zoom || "1") || 1;
+    const next = Math.min(2, Math.max(0.5, cur + delta));
+    (document.body.style as CSSStyleDeclaration & { zoom?: string }).zoom = String(next);
+  }
+
+  private dispatchKey(key: string, keyCode: number) {
+    const target = document.activeElement ?? document.body;
+    const init = {
+      bubbles: true, cancelable: true, composed: true,
+      key, code: key, keyCode, which: keyCode,
+    } as KeyboardEventInit;
+    target.dispatchEvent(new KeyboardEvent("keydown", init));
+    target.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
 }
