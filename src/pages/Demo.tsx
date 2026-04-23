@@ -253,6 +253,14 @@ const Demo = () => {
             </Sheet>
             <GestureSettingsPanel />
             <button
+              onClick={() => setTourOpen(true)}
+              title="Show gesture guide"
+              className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center gap-1.5 border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              GUIDE
+            </button>
+            <button
               onClick={() => setCalibrationOpen(true)}
               title="Re-run calibration"
               className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center gap-1.5 border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
@@ -334,9 +342,16 @@ const Demo = () => {
             onClose={() => setCalibrationOpen(false)}
           />
         )}
+        {!showInit && (
+          <GestureTour
+            forceOpen={tourOpen}
+            onClose={() => setTourOpen(false)}
+            autoShow
+          />
+        )}
       </main>
     ),
-    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, calibrationOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
+    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, calibrationOpen, tourOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
   );
 };
 
