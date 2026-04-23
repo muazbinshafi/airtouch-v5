@@ -246,14 +246,19 @@ export class GestureEngine {
     const pinkyPip = lm[18];
     const wrist = lm[0];
 
-    // EMA smoothing on 4 + 8 only
-    const aRaw: [number, number, number] = [thumbTip.x, thumbTip.y, thumbTip.z];
-    const bRaw: [number, number, number] = [indexTip.x, indexTip.y, indexTip.z];
-    this.emaThumb = this.ema(this.emaThumb, aRaw, this.config.smoothingAlpha);
-    this.emaIndex = this.ema(this.emaIndex, bRaw, this.config.smoothingAlpha);
+    // Apply One-Euro filter independently per axis on landmarks 4 (thumb) and
+    // 8 (index). The filter adapts cutoff to motion speed → still hand = no
+    // jitter, fast hand = no lag.
+    this.applySmoothingParams();
+    const [tx, ty] = this.fThumb.filter(thumbTip.x, thumbTip.y, tNow);
+    const [, tz] = this.fThumbZ.filter(thumbTip.z, 0, tNow);
+    const [ixs, iys] = this.fIndex.filter(indexTip.x, indexTip.y, tNow);
+    const [, izs] = this.fIndexZ.filter(indexTip.z, 0, tNow);
+    this.smoothedThumb = [tx, ty, tz];
+    this.smoothedIndex = [ixs, iys, izs];
 
-    const ix = this.emaIndex[0];
-    const iy = this.emaIndex[1];
+    const ix = this.smoothedIndex[0];
+    const iy = this.smoothedIndex[1];
 
     // Active zone: clamp to monitor aspect ratio centered at origin offset
     // Camera viewport is [0..1] x [0..1] (normalized). Build the largest rect
@@ -306,11 +311,11 @@ export class GestureEngine {
     this.cursor.y = Math.min(1, Math.max(0, cy2));
     this.prevIndex = { x: inZoneX, y: inZoneY, t: tNow };
 
-    // Pinch distance (3D Euclidean)
-    const dx = this.emaThumb[0] - this.emaIndex[0];
-    const dy = this.emaThumb[1] - this.emaIndex[1];
-    const dz = this.emaThumb[2] - this.emaIndex[2];
-    const pinch = Math.hypot(dx, dy, dz);
+    // Pinch distance (3D Euclidean) on smoothed landmarks
+    const dxp = this.smoothedThumb[0] - this.smoothedIndex[0];
+    const dyp = this.smoothedThumb[1] - this.smoothedIndex[1];
+    const dzp = this.smoothedThumb[2] - this.smoothedIndex[2];
+    const pinch = Math.hypot(dxp, dyp, dzp);
     const pressure = Math.min(1, Math.max(0, 1 - pinch / 0.15));
 
     // ---- Finger state detection (extended/folded) ----
