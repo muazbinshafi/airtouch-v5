@@ -59,13 +59,14 @@ function Header() {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="font-display text-[15px] text-foreground">OmniPoint</span>
-            <span className="font-mono text-[9px] tracking-[0.25em] text-muted-foreground -mt-0.5">HCI · v1.0</span>
+            <span className="font-mono text-[9px] tracking-[0.25em] text-muted-foreground -mt-0.5">HCI · v2.0</span>
           </div>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">Features</a>
           <a href="#gestures" className="hover:text-foreground transition-colors">Gestures</a>
           <Link to="/guide" className="hover:text-foreground transition-colors">Guide</Link>
+          <Link to="/bridge" className="hover:text-foreground transition-colors">Bridge</Link>
           <a href="#architecture" className="hover:text-foreground transition-colors">How it works</a>
           <a href="#quickstart" className="hover:text-foreground transition-colors">Docs</a>
         </nav>
@@ -81,6 +82,12 @@ function Header() {
           </a>
           <ThemeToggleQuick />
           <ThemeSettings variant="inline" />
+          <Link
+            to="/auth"
+            className="hidden sm:inline-flex items-center justify-center h-10 px-3 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            Sign in
+          </Link>
           <Link to="/demo" className="btn-primary h-10 px-4 text-sm">
             <Play className="w-3.5 h-3.5 fill-current" />
             Launch demo

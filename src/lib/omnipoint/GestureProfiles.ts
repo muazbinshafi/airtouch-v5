@@ -164,6 +164,14 @@ export const GestureProfileStore = {
     GestureSettingsStore.patch(p.settings);
     emit();
   },
+  /** Replace the entire snapshot (used by cloud sync). */
+  replace(next: { profiles: GestureProfile[]; activeId: string | null }) {
+    state = { profiles: next.profiles, activeId: next.activeId };
+    persist(state);
+    const active = state.profiles.find((p) => p.id === state.activeId);
+    if (active) GestureSettingsStore.patch(active.settings);
+    emit();
+  },
   /** Snapshot the live settings into a new named profile. */
   saveAsNew(name: string): GestureProfile {
     const now = Date.now();
