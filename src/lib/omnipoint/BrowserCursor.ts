@@ -6,6 +6,7 @@
 // element is mutated in place inside an rAF loop.
 
 import { TelemetryStore, type GestureKind } from "./TelemetryStore";
+import { PaintStore, PaintHistory } from "./PaintStore";
 
 export type CursorMode = "off" | "pointer" | "draw";
 
