@@ -607,15 +607,16 @@ function Quickstart() {
         <SectionHead
           eyebrow="Quickstart"
           title="Up and running in 60 seconds."
-          subtitle="The browser demo works standalone. Add the Linux daemon for system-wide control."
+          subtitle="The browser demo works standalone on any device. Add the Python bridge for full system-wide OS control on Windows, macOS or Linux."
         />
         <div className="mt-14 grid lg:grid-cols-2 gap-5">
           <CodeBlock
             step="01"
-            title="Run the Linux bridge"
+            title="Run the cross-platform bridge"
             code={`cd bridge
-sudo modprobe uinput
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+# Windows: .venv\\Scripts\\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 python3 omnipoint_bridge.py`}
           />
