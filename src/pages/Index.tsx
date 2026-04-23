@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
-import { Hand, MousePointer2, Zap, Shield, Activity, Sparkles, ArrowRight, Play, Github, Cpu, Eye, Gauge } from "lucide-react";
+import {
+  Hand, MousePointer2, Zap, Shield, Activity, Sparkles, ArrowRight, Play, Github,
+  Cpu, Eye, Gauge, Smartphone, Palette, Settings2, Wand2, Layers, Download,
+} from "lucide-react";
 import { ThemeSettings, ThemeToggleQuick } from "@/components/ThemeSettings";
 
 const Index = () => {
   useEffect(() => {
-    document.title = "OmniPoint HCI — Touchless Gesture Control";
+    document.title = "OmniPoint HCI — Touchless Gesture Control for Web, Desktop & Mobile";
     const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
       let tag = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
       if (!tag) {
@@ -15,9 +18,16 @@ const Index = () => {
       }
       tag.content = content;
     };
-    setMeta("description", "Control your computer with hand gestures. 60 FPS MediaPipe vision, real OS cursor control via a tiny Linux daemon. Open source.");
+    setMeta(
+      "description",
+      "Control your computer or phone with hand gestures. 60 FPS MediaPipe vision, customizable bindings, paint mode, cross-platform OS bridge, PWA installable. Open source.",
+    );
     setMeta("og:title", "OmniPoint HCI — Touchless Gesture Control", "property");
-    setMeta("og:description", "Hand gestures → real OS cursor. MediaPipe + Linux uinput bridge.", "property");
+    setMeta(
+      "og:description",
+      "Hand gestures → real cursor. MediaPipe vision · customizable profiles · paint toolbox · cross-platform bridge · installable on phone.",
+      "property",
+    );
   }, []);
 
   return (
@@ -25,8 +35,11 @@ const Index = () => {
       <Header />
       <Hero />
       <Marquee />
+      <WhatsNew />
       <Features />
       <Gestures />
+      <PaintShowcase />
+      <MobileSection />
       <Architecture />
       <Quickstart />
       <CTA />
@@ -87,15 +100,16 @@ function Hero() {
           <div>
             <div className="chip mb-6">
               <Sparkles className="w-3 h-3" />
-              Now with 9 native gestures · MediaPipe powered
+              v2 · Customizable gestures · Paint mode · Mobile-ready
             </div>
             <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl leading-[1.02] text-foreground">
               Your hands are<br />
               the new <span className="text-gradient">mouse</span>.
             </h1>
             <p className="mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed">
-              OmniPoint turns any webcam into a precision input device. Move, click, drag and
-              scroll across your entire desktop — without touching a thing. 60 FPS vision, sub-frame latency.
+              OmniPoint turns any webcam into a precision input device. Move, click, draw and
+              scroll across your desktop or phone — without touching a thing. Customizable
+              gestures, named profiles, paint toolbox, sub-frame latency.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link to="/demo" className="btn-primary h-12 px-6 text-sm">
@@ -105,16 +119,17 @@ function Hero() {
               </Link>
               <Link to="/guide" className="btn-ghost h-12 px-6 text-sm">
                 <Hand className="w-4 h-4" />
-                See gesture guide
+                Gesture guide
               </Link>
               <Link to="/install" className="btn-ghost h-12 px-6 text-sm">
+                <Smartphone className="w-4 h-4" />
                 Install on phone
               </Link>
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
               <Stat label="FPS" value="60" />
               <Stat label="Latency" value="<16ms" />
-              <Stat label="Gestures" value="9" />
+              <Stat label="Gestures" value="11" />
               <Stat label="Open source" value="MIT" />
             </div>
           </div>
@@ -212,7 +227,17 @@ function HandGlyph() {
 }
 
 function Marquee() {
-  const items = ["MediaPipe Vision", "Linux uinput Bridge", "X11 + Wayland", "Chromium / Edge", "60 FPS @ 720p", "JSON over WebSocket", "Open Source · MIT"];
+  const items = [
+    "MediaPipe Vision",
+    "Cross-platform Bridge",
+    "Customizable bindings",
+    "Named profiles",
+    "Paint toolbox",
+    "PWA · Installable",
+    "Mobile-ready",
+    "60 FPS @ 720p",
+    "Open Source · MIT",
+  ];
   return (
     <section className="border-y border-border bg-secondary/40">
       <div className="mx-auto max-w-7xl px-6 py-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-2 text-xs font-mono tracking-wider text-muted-foreground">
@@ -227,14 +252,81 @@ function Marquee() {
   );
 }
 
+function WhatsNew() {
+  const updates = [
+    {
+      tag: "NEW",
+      icon: Settings2,
+      title: "Customizable gestures",
+      desc: "Remap any pose to any action. Per-mode bindings (pointer vs draw), hold-time tuning, and per-gesture cooldowns.",
+    },
+    {
+      tag: "NEW",
+      icon: Layers,
+      title: "Named profiles",
+      desc: "Save your tuning as profiles like 'Presenter' or 'Artist'. Switch instantly. Export & import as JSON.",
+    },
+    {
+      tag: "NEW",
+      icon: Wand2,
+      title: "Calibration wizard",
+      desc: "First-run guided setup: framing → origin → sensitivity. Re-run anytime from the toolbar.",
+    },
+    {
+      tag: "NEW",
+      icon: Palette,
+      title: "Paint toolbox",
+      desc: "MS Paint-style overlay. Pens, marker, highlighter, eraser, shapes, undo/redo, save as PNG.",
+    },
+    {
+      tag: "NEW",
+      icon: Smartphone,
+      title: "Mobile + PWA",
+      desc: "Touch-friendly UI, dvh viewport, slide-up telemetry sheet. Install to home screen on iOS & Android.",
+    },
+    {
+      tag: "NEW",
+      icon: Cpu,
+      title: "Cross-platform bridge",
+      desc: "Python WebSocket bridge using PyAutoGUI — works on Windows, macOS and Linux for real OS control.",
+    },
+  ];
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
+      <SectionHead
+        eyebrow="What's new"
+        title="Built up since v1."
+        subtitle="The latest pass focused on customization, paint, and getting OmniPoint running everywhere."
+      />
+      <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {updates.map((u) => (
+          <div
+            key={u.title}
+            className="panel p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="font-mono text-[9px] tracking-[0.25em] text-primary border border-primary/40 px-1.5 py-0.5">
+                {u.tag}
+              </span>
+              <u.icon className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <h3 className="font-display text-base text-foreground">{u.title}</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{u.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Features() {
   const features = [
     { icon: Eye, title: "Vision-first", desc: "MediaPipe Hand Landmarker tracks 21 keypoints per hand at 60 FPS, fully on-device." },
     { icon: Zap, title: "Sub-frame latency", desc: "Smoothed pointer with EMA filtering and velocity² acceleration. Feels instant." },
-    { icon: Cpu, title: "Real OS events", desc: "A 200-line Python daemon turns gestures into kernel-level mouse events via uinput." },
-    { icon: Shield, title: "Privacy by design", desc: "Camera stream never leaves the browser. The daemon only receives intent payloads." },
-    { icon: Gauge, title: "Live telemetry", desc: "On-screen HUD shows handedness, finger states, pinch distance, and confidence." },
-    { icon: Sparkles, title: "9 gestures", desc: "Point, pinch, right-click, drag, scroll, thumbs-up, palm, fist — all out of the box." },
+    { icon: Cpu, title: "Real OS events", desc: "A tiny Python bridge using PyAutoGUI turns gestures into kernel-level events on Win/macOS/Linux." },
+    { icon: Shield, title: "Privacy by design", desc: "Camera stream never leaves the browser. The bridge only receives intent payloads." },
+    { icon: Gauge, title: "Live telemetry", desc: "On-screen HUD shows FPS, inference latency, handedness, finger states and confidence." },
+    { icon: Settings2, title: "Customizable", desc: "Remap every static pose, save profiles, tune accuracy bias, hold-time and cooldowns." },
   ];
   return (
     <section id="features" className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
@@ -304,18 +396,156 @@ function Gestures() {
   );
 }
 
+function PaintShowcase() {
+  const tools = ["Pen", "Marker", "Highlighter", "Eraser", "Line", "Rect", "Ellipse", "Arrow"];
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
+      <SectionHead
+        eyebrow="Paint mode"
+        title="Draw in the air."
+        subtitle="A pinch becomes a stroke. Switch to draw mode and the whole viewport becomes a canvas."
+      />
+      <div className="mt-12 grid lg:grid-cols-[1.2fr_1fr] gap-8 items-center">
+        <div className="panel-elevated p-6 bg-mesh">
+          <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.25em] text-muted-foreground mb-4">
+            <Palette className="w-3.5 h-3.5 text-primary" />
+            TOOLBOX · DRAW MODE
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {tools.map((t) => (
+              <div
+                key={t}
+                className="border hairline px-3 h-10 flex items-center justify-center font-mono text-[11px] tracking-[0.18em] text-foreground bg-card/40"
+              >
+                {t}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-6 gap-1.5 mt-3">
+            {["#000", "#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#fff", "#78716c", "#6366f1"].map((c) => (
+              <span key={c} className="h-7 border border-border" style={{ backgroundColor: c }} />
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-4 text-xs font-mono tracking-wider text-muted-foreground">
+            <span>↶ UNDO · ↷ REDO</span>
+            <span>⤓ SAVE PNG</span>
+            <span>✕ CLEAR</span>
+          </div>
+        </div>
+        <div>
+          <h3 className="font-display text-2xl text-foreground">Sketch with your hand</h3>
+          <p className="mt-3 text-muted-foreground leading-relaxed">
+            Pinch and move to draw. Open palm undoes. Pinky-only clears. Four
+            fingers saves to PNG. Every gesture in draw mode is remappable in the
+            <span className="font-mono text-foreground"> GESTURES</span> panel.
+          </p>
+          <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              Highlighter, marker, eraser + 4 shape tools
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              Per-stroke undo/redo (30 step history)
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              Custom color picker + 12 presets
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" />
+              One-click save as PNG
+            </li>
+          </ul>
+          <Link to="/demo" className="btn-primary h-11 px-5 text-sm mt-6 inline-flex">
+            <Play className="w-4 h-4 fill-current" />
+            Try draw mode
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MobileSection() {
+  return (
+    <section className="border-y border-border bg-secondary/30">
+      <div className="mx-auto max-w-7xl px-6 py-24 lg:py-32 grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <div className="chip mb-4">
+            <Smartphone className="w-3 h-3" />
+            Mobile-ready
+          </div>
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-foreground leading-[1.1]">
+            Works on your <span className="text-gradient">phone</span>, too.
+          </h2>
+          <p className="mt-4 text-muted-foreground text-lg">
+            Touch-first controls, dvh viewport, slide-up telemetry sheet, and a
+            full PWA install path. Use the front camera, gesture in the air, and
+            the floating cursor still drives the page.
+          </p>
+          <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Installable on iOS & Android via PWA</li>
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Capacitor build path for native packaging</li>
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Touch-friendly 36px tap targets, swipe-friendly sheets</li>
+            <li className="flex items-start gap-2.5"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-primary" /> Offline asset caching for MediaPipe runtime</li>
+          </ul>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link to="/install" className="btn-primary h-11 px-5 text-sm">
+              <Download className="w-4 h-4" />
+              Install on phone
+            </Link>
+            <Link to="/demo" className="btn-ghost h-11 px-5 text-sm">
+              Open mobile demo
+            </Link>
+          </div>
+        </div>
+        <div className="relative flex justify-center">
+          <div className="absolute -inset-12 bg-gradient-primary opacity-20 blur-3xl rounded-full" />
+          <div className="relative w-[260px] h-[520px] rounded-[36px] border-4 border-foreground/15 bg-card shadow-2xl overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-7 bg-background flex items-center justify-center">
+              <div className="w-20 h-4 rounded-full bg-foreground/20" />
+            </div>
+            <div className="absolute inset-0 pt-7 flex flex-col">
+              <div className="px-3 py-3 border-b hairline flex items-center justify-between font-mono text-[9px] tracking-[0.25em] text-muted-foreground">
+                <span>OMNIPOINT</span>
+                <span className="text-[hsl(var(--success))]">● LIVE</span>
+              </div>
+              <div className="flex-1 dot-grid relative">
+                <div className="absolute inset-3 border hairline grid place-items-center">
+                  <Hand className="w-12 h-12 text-primary anim-pulse-soft" strokeWidth={1.5} />
+                </div>
+              </div>
+              <div className="border-t hairline px-3 py-2 flex items-center justify-around">
+                {["POINT", "DRAW", "OFF"].map((t, i) => (
+                  <span
+                    key={t}
+                    className={`font-mono text-[9px] tracking-[0.2em] ${i === 0 ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Architecture() {
   return (
     <section id="architecture" className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
       <SectionHead
         eyebrow="Architecture"
-        title="Browser sees. Daemon acts."
-        subtitle="A clean two-process design. The web app handles vision; a tiny native bridge handles HID."
+        title="Browser sees. Bridge acts."
+        subtitle="A clean two-process design. The web app handles vision; a tiny cross-platform Python bridge handles HID."
       />
       <div className="mt-14 grid lg:grid-cols-[1fr_auto_1fr] gap-6 items-stretch">
         <ArchBox
           icon={Eye}
-          title="Browser (Chromium)"
+          title="Browser (any modern)"
           lines={["Webcam + MediaPipe", "Gesture state machine", "60 FPS canvas loop", "Live telemetry HUD"]}
         />
         <div className="hidden lg:flex flex-col items-center justify-center gap-2">
@@ -327,14 +557,14 @@ function Architecture() {
         </div>
         <ArchBox
           icon={Cpu}
-          title="Linux Bridge Daemon"
-          lines={["python-uinput (HID)", "Moves real OS cursor", "Click / drag / scroll", "Heartbeat + kill switch"]}
+          title="Cross-platform Bridge"
+          lines={["PyAutoGUI (Win/macOS/Linux)", "Moves real OS cursor", "Click / drag / scroll / keys", "Heartbeat + kill switch"]}
         />
       </div>
       <div className="mt-12 grid sm:grid-cols-3 gap-4">
         <FilePill path="src/lib/omnipoint/GestureEngine.ts" note="Vision + state machine" />
         <FilePill path="src/lib/omnipoint/HIDBridge.ts" note="WebSocket + heartbeat" />
-        <FilePill path="bridge/omnipoint_bridge.py" note="uinput daemon (X11 + Wayland)" />
+        <FilePill path="bridge/omnipoint_bridge.py" note="PyAutoGUI bridge · cross-platform" />
       </div>
     </section>
   );
@@ -377,15 +607,16 @@ function Quickstart() {
         <SectionHead
           eyebrow="Quickstart"
           title="Up and running in 60 seconds."
-          subtitle="The browser demo works standalone. Add the Linux daemon for system-wide control."
+          subtitle="The browser demo works standalone on any device. Add the Python bridge for full system-wide OS control on Windows, macOS or Linux."
         />
         <div className="mt-14 grid lg:grid-cols-2 gap-5">
           <CodeBlock
             step="01"
-            title="Run the Linux bridge"
+            title="Run the cross-platform bridge"
             code={`cd bridge
-sudo modprobe uinput
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+# Windows: .venv\\Scripts\\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 python3 omnipoint_bridge.py`}
           />

@@ -14,7 +14,9 @@ import { PaintToolbar } from "@/components/omnipoint/PaintToolbar";
 import { GestureSettingsPanel } from "@/components/omnipoint/GestureSettingsPanel";
 import { useBrowserCursor } from "@/hooks/useBrowserCursor";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Gauge } from "lucide-react";
+import { Gauge, Wand2 } from "lucide-react";
+import { CalibrationWizard } from "@/components/omnipoint/CalibrationWizard";
+import { PerformanceHUD } from "@/components/omnipoint/PerformanceHUD";
 
 const Demo = () => {
   const [initialized, setInitialized] = useState(false);
@@ -23,6 +25,7 @@ const Demo = () => {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [troubleshooterOpen, setTroubleshooterOpen] = useState(false);
+  const [calibrationOpen, setCalibrationOpen] = useState(false);
 
   const [config, setConfigState] = useState<EngineConfig>(defaultConfig);
   const [bridgeUrl, setBridgeUrl] = useState("ws://localhost:8765");
@@ -246,6 +249,14 @@ const Demo = () => {
               </SheetContent>
             </Sheet>
             <GestureSettingsPanel />
+            <button
+              onClick={() => setCalibrationOpen(true)}
+              title="Re-run calibration"
+              className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center gap-1.5 border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              CALIBRATE
+            </button>
             <Link
               to="/"
               className="font-mono text-[10px] tracking-[0.3em] px-3 h-9 inline-flex items-center border hairline text-muted-foreground hover:text-foreground bg-card/60 backdrop-blur"
@@ -310,9 +321,19 @@ const Demo = () => {
           />
         )}
         <ThemeSettings variant="floating" />
+        {!showInit && <PerformanceHUD />}
+        {!showInit && (
+          <CalibrationWizard
+            forceOpen={calibrationOpen}
+            config={config}
+            setConfig={setConfig}
+            onSetOrigin={handleSetOrigin}
+            onClose={() => setCalibrationOpen(false)}
+          />
+        )}
       </main>
     ),
-    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
+    [showInit, status, progress, error, initialize, initializing, config, setConfig, bridgeUrl, handleEmergencyToggle, handleReconnect, handleSetOrigin, handleTestBridge, troubleshooterOpen, calibrationOpen, controlMode, browserCursor.mode, browserCursor.setMode, browserCursor.clearDrawing, browserCursor.undo, browserCursor.redo, browserCursor.saveAsPng],
   );
 };
 
