@@ -1,5 +1,7 @@
-// GestureEngine - MediaPipe HandLandmarker, EMA smoothing, active zone clamp,
-// velocity² acceleration, and a strict gesture state machine.
+// GestureEngine - MediaPipe HandLandmarker with One-Euro filter smoothing,
+// active-zone clamp, adaptive cursor acceleration, gesture stability voting,
+// and a strict click/drag state machine. Tuned for low-latency, jitter-free
+// pointer tracking comparable to native trackpads.
 
 import {
   HandLandmarker,
@@ -8,10 +10,11 @@ import {
 } from "@mediapipe/tasks-vision";
 import { TelemetryStore, type GestureKind } from "./TelemetryStore";
 import type { HIDBridge } from "./HIDBridge";
+import { OneEuroFilter2D } from "./OneEuroFilter";
 
 export interface EngineConfig {
   sensitivity: number;       // multiplier for velocity curve (1..5)
-  smoothingAlpha: number;    // EMA alpha 0..1 (0 = raw, 1 = heavy)
+  smoothingAlpha: number;    // One-Euro minCutoff (0.5=very smooth, 4=very responsive)
   clickThreshold: number;    // pinch distance < this triggers click (default 0.03)
   releaseThreshold: number;  // hysteresis (default 0.04)
   scrollSensitivity: number; // pixels per delta unit (1..50)
@@ -20,13 +23,13 @@ export interface EngineConfig {
 }
 
 export const defaultConfig: EngineConfig = {
-  sensitivity: 1.6,
-  smoothingAlpha: 0.3,
-  clickThreshold: 0.03,
-  releaseThreshold: 0.04,
-  scrollSensitivity: 12,
+  sensitivity: 1.4,
+  smoothingAlpha: 1.2,        // One-Euro minCutoff. ~1.2 = balanced smooth+snappy.
+  clickThreshold: 0.032,
+  releaseThreshold: 0.05,     // wider hysteresis → fewer click flickers
+  scrollSensitivity: 14,
   aspectRatio: 16 / 9,
-  deadZone: 0.0008,
+  deadZone: 0.0006,
 };
 
 const HAND_CONNECTIONS: [number, number][] = [
@@ -48,9 +51,15 @@ export class GestureEngine {
   private bridge: HIDBridge;
   public config: EngineConfig;
 
-  // EMA state for L4 + L8 (x,y,z)
-  private emaThumb: [number, number, number] | null = null;
-  private emaIndex: [number, number, number] | null = null;
+  // One-Euro filters for jitter-free thumb / index landmarks (3D each)
+  private fThumb = new OneEuroFilter2D(1.2, 0.015);
+  private fThumbZ = new OneEuroFilter2D(1.2, 0.015);
+  private fIndex = new OneEuroFilter2D(1.2, 0.015);
+  private fIndexZ = new OneEuroFilter2D(1.2, 0.015);
+  private smoothedThumb: [number, number, number] | null = null;
+  private smoothedIndex: [number, number, number] | null = null;
+  // Final cursor low-pass (after acceleration). Slightly snappier than landmarks.
+  private fCursor = new OneEuroFilter2D(2.0, 0.03);
 
   // Cursor state (smoothed, post-acceleration), normalized to active zone 0..1
   private cursor = { x: 0.5, y: 0.5 };
@@ -63,6 +72,13 @@ export class GestureEngine {
   private clickState: ClickState = "IDLE";
   private pinchStartTs = 0;
   private readonly debounceMs = 50;
+
+  // Gesture stability voting — require N consecutive frames of the same
+  // candidate gesture before committing. Eliminates 1-frame flickers.
+  private gestureCandidate: GestureKind = "none";
+  private gestureCandidateCount = 0;
+  private committedGesture: GestureKind = "none";
+  private readonly gestureStabilityFrames = 3;
 
   // Scroll state
   private lastScrollY: number | null = null;
@@ -80,9 +96,23 @@ export class GestureEngine {
     this.canvas = canvas;
     this.bridge = bridge;
     this.config = config;
+    this.applySmoothingParams();
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D context unavailable");
     this.ctx = ctx;
+  }
+
+  /** Map config.smoothingAlpha → One-Euro params for both landmark + cursor. */
+  private applySmoothingParams() {
+    const minCutoff = Math.max(0.3, Math.min(6, this.config.smoothingAlpha));
+    // beta scales gently with cutoff so fast motion is always followed.
+    const beta = 0.01 + minCutoff * 0.01;
+    this.fThumb.setParams(minCutoff, beta);
+    this.fThumbZ.setParams(minCutoff, beta);
+    this.fIndex.setParams(minCutoff, beta);
+    this.fIndexZ.setParams(minCutoff, beta);
+    // Cursor filter is always slightly snappier than landmarks.
+    this.fCursor.setParams(Math.min(6, minCutoff + 0.8), beta + 0.015);
   }
 
   async init(onProgress?: (msg: string) => void) {
@@ -94,9 +124,10 @@ export class GestureEngine {
     const baseOpts = {
       numHands: 1,
       runningMode: "VIDEO" as const,
-      minHandDetectionConfidence: 0.5,
-      minHandPresenceConfidence: 0.5,
-      minTrackingConfidence: 0.5,
+      // Higher thresholds reject low-confidence frames → fewer phantom poses.
+      minHandDetectionConfidence: 0.7,
+      minHandPresenceConfidence: 0.7,
+      minTrackingConfidence: 0.65,
     };
     const modelAssetPath =
       "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
@@ -135,21 +166,11 @@ export class GestureEngine {
   }
 
   setOrigin() {
-    if (!this.emaIndex) return;
-    this.originOffset.x = this.emaIndex[0] - 0.5;
-    this.originOffset.y = this.emaIndex[1] - 0.5;
+    if (!this.smoothedIndex) return;
+    this.originOffset.x = this.smoothedIndex[0] - 0.5;
+    this.originOffset.y = this.smoothedIndex[1] - 0.5;
   }
 
-  private ema(prev: [number, number, number] | null, cur: [number, number, number], alpha: number): [number, number, number] {
-    if (!prev) return cur;
-    // alpha = smoothing strength: higher = more smoothing => weight previous more.
-    const a = Math.min(1, Math.max(0, alpha));
-    return [
-      prev[0] * a + cur[0] * (1 - a),
-      prev[1] * a + cur[1] * (1 - a),
-      prev[2] * a + cur[2] * (1 - a),
-    ];
-  }
 
   private tick() {
     if (!this.landmarker || this.video.readyState < 2) return;
@@ -181,8 +202,14 @@ export class GestureEngine {
       this.processLandmarks(result, tNow);
     } else {
       confidence = 0;
-      this.emaIndex = null;
-      this.emaThumb = null;
+      this.smoothedIndex = null;
+      this.smoothedThumb = null;
+      this.fThumb.reset(); this.fThumbZ.reset();
+      this.fIndex.reset(); this.fIndexZ.reset();
+      this.fCursor.reset();
+      this.gestureCandidate = "none";
+      this.gestureCandidateCount = 0;
+      this.committedGesture = "none";
       this.prevIndex = null;
       this.clickState = "IDLE";
       this.lastScrollY = null;
@@ -220,14 +247,19 @@ export class GestureEngine {
     const pinkyPip = lm[18];
     const wrist = lm[0];
 
-    // EMA smoothing on 4 + 8 only
-    const aRaw: [number, number, number] = [thumbTip.x, thumbTip.y, thumbTip.z];
-    const bRaw: [number, number, number] = [indexTip.x, indexTip.y, indexTip.z];
-    this.emaThumb = this.ema(this.emaThumb, aRaw, this.config.smoothingAlpha);
-    this.emaIndex = this.ema(this.emaIndex, bRaw, this.config.smoothingAlpha);
+    // Apply One-Euro filter independently per axis on landmarks 4 (thumb) and
+    // 8 (index). The filter adapts cutoff to motion speed → still hand = no
+    // jitter, fast hand = no lag.
+    this.applySmoothingParams();
+    const [tx, ty] = this.fThumb.filter(thumbTip.x, thumbTip.y, tNow);
+    const [, tz] = this.fThumbZ.filter(thumbTip.z, 0, tNow);
+    const [ixs, iys] = this.fIndex.filter(indexTip.x, indexTip.y, tNow);
+    const [, izs] = this.fIndexZ.filter(indexTip.z, 0, tNow);
+    this.smoothedThumb = [tx, ty, tz];
+    this.smoothedIndex = [ixs, iys, izs];
 
-    const ix = this.emaIndex[0];
-    const iy = this.emaIndex[1];
+    const ix = this.smoothedIndex[0];
+    const iy = this.smoothedIndex[1];
 
     // Active zone: clamp to monitor aspect ratio centered at origin offset
     // Camera viewport is [0..1] x [0..1] (normalized). Build the largest rect
@@ -276,15 +308,20 @@ export class GestureEngine {
         cy2 = this.cursor.y + dy * gain;
       }
     }
-    this.cursor.x = Math.min(1, Math.max(0, cx2));
-    this.cursor.y = Math.min(1, Math.max(0, cy2));
+    // Final cursor low-pass: clamp first, then run through One-Euro for the
+    // last bit of polish (kills any residual sub-pixel jitter under stillness).
+    const rawCx = Math.min(1, Math.max(0, cx2));
+    const rawCy = Math.min(1, Math.max(0, cy2));
+    const [smCx, smCy] = this.fCursor.filter(rawCx, rawCy, tNow);
+    this.cursor.x = smCx;
+    this.cursor.y = smCy;
     this.prevIndex = { x: inZoneX, y: inZoneY, t: tNow };
 
-    // Pinch distance (3D Euclidean)
-    const dx = this.emaThumb[0] - this.emaIndex[0];
-    const dy = this.emaThumb[1] - this.emaIndex[1];
-    const dz = this.emaThumb[2] - this.emaIndex[2];
-    const pinch = Math.hypot(dx, dy, dz);
+    // Pinch distance (3D Euclidean) on smoothed landmarks
+    const dxp = this.smoothedThumb[0] - this.smoothedIndex[0];
+    const dyp = this.smoothedThumb[1] - this.smoothedIndex[1];
+    const dzp = this.smoothedThumb[2] - this.smoothedIndex[2];
+    const pinch = Math.hypot(dxp, dyp, dzp);
     const pressure = Math.min(1, Math.max(0, 1 - pinch / 0.15));
 
     // ---- Finger state detection (extended/folded) ----
@@ -395,10 +432,36 @@ export class GestureEngine {
       }
     }
 
+    // Gesture stability voting — keep the same gesture for N frames before
+    // committing it. Pointer/click/drag/scroll are time-critical and bypass
+    // voting; static poses (open_palm/thumbs_up/etc) get the full vote.
+    const isStaticPose =
+      gesture === "open_palm" || gesture === "thumbs_up" ||
+      gesture === "pinky_only" || gesture === "four_fingers" ||
+      gesture === "fist" || gesture === "right_click";
+    let committed: GestureKind = gesture;
+    if (isStaticPose) {
+      if (gesture === this.gestureCandidate) {
+        this.gestureCandidateCount++;
+      } else {
+        this.gestureCandidate = gesture;
+        this.gestureCandidateCount = 1;
+      }
+      if (this.gestureCandidateCount >= this.gestureStabilityFrames) {
+        this.committedGesture = gesture;
+      }
+      committed = this.committedGesture === gesture ? gesture : "none";
+    } else {
+      this.gestureCandidate = gesture;
+      this.gestureCandidateCount = 0;
+      this.committedGesture = gesture;
+      committed = gesture;
+    }
+
     TelemetryStore.set({
       cursorX: this.cursor.x,
       cursorY: this.cursor.y,
-      gesture,
+      gesture: committed,
       handPresent: true,
       handedness,
       fingersExtended,
@@ -406,7 +469,7 @@ export class GestureEngine {
       pinchDistance: pinch,
     });
 
-    this.emitMotion(gesture, pressure);
+    this.emitMotion(committed, pressure);
   }
 
   private emitMotion(gesture: GestureKind, pressure: number) {
