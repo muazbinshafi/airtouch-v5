@@ -1,5 +1,7 @@
-// GestureEngine - MediaPipe HandLandmarker, EMA smoothing, active zone clamp,
-// velocity² acceleration, and a strict gesture state machine.
+// GestureEngine - MediaPipe HandLandmarker with One-Euro filter smoothing,
+// active-zone clamp, adaptive cursor acceleration, gesture stability voting,
+// and a strict click/drag state machine. Tuned for low-latency, jitter-free
+// pointer tracking comparable to native trackpads.
 
 import {
   HandLandmarker,
@@ -8,10 +10,11 @@ import {
 } from "@mediapipe/tasks-vision";
 import { TelemetryStore, type GestureKind } from "./TelemetryStore";
 import type { HIDBridge } from "./HIDBridge";
+import { OneEuroFilter2D } from "./OneEuroFilter";
 
 export interface EngineConfig {
   sensitivity: number;       // multiplier for velocity curve (1..5)
-  smoothingAlpha: number;    // EMA alpha 0..1 (0 = raw, 1 = heavy)
+  smoothingAlpha: number;    // One-Euro minCutoff (0.5=very smooth, 4=very responsive)
   clickThreshold: number;    // pinch distance < this triggers click (default 0.03)
   releaseThreshold: number;  // hysteresis (default 0.04)
   scrollSensitivity: number; // pixels per delta unit (1..50)
@@ -20,13 +23,13 @@ export interface EngineConfig {
 }
 
 export const defaultConfig: EngineConfig = {
-  sensitivity: 1.6,
-  smoothingAlpha: 0.3,
-  clickThreshold: 0.03,
-  releaseThreshold: 0.04,
-  scrollSensitivity: 12,
+  sensitivity: 1.4,
+  smoothingAlpha: 1.2,        // One-Euro minCutoff. ~1.2 = balanced smooth+snappy.
+  clickThreshold: 0.032,
+  releaseThreshold: 0.05,     // wider hysteresis → fewer click flickers
+  scrollSensitivity: 14,
   aspectRatio: 16 / 9,
-  deadZone: 0.0008,
+  deadZone: 0.0006,
 };
 
 const HAND_CONNECTIONS: [number, number][] = [
