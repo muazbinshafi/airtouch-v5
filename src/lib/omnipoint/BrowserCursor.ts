@@ -308,11 +308,37 @@ export class BrowserCursor {
     window.scrollBy({ top: deltaY, behavior: "auto" });
   }
 
-  private drawTo(x: number, y: number) {
+  private applyPenStyle() {
+    if (!this.drawCtx) return;
+    const { color, size, alpha, composite, tool } = PaintStore.get();
+    const ctx = this.drawCtx;
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = composite;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = tool === "highlighter" ? Math.max(size, 14) : size;
+  }
+
+  private resetCtx() {
+    if (!this.drawCtx) return;
+    this.drawCtx.globalAlpha = 1;
+    this.drawCtx.globalCompositeOperation = "source-over";
+  }
+
+  private snapshotCanvas(): ImageData | null {
+    if (!this.drawCtx) return null;
+    return this.drawCtx.getImageData(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+  }
+
+  private restoreCanvas(img: ImageData | null) {
+    if (!this.drawCtx || !img) return;
+    this.drawCtx.putImageData(img, 0, 0);
+  }
+
+  private drawFreehand(x: number, y: number) {
     if (!this.drawCtx) return;
     const ctx = this.drawCtx;
-    ctx.strokeStyle = `hsl(var(--primary))`;
-    ctx.lineWidth = 3;
+    this.applyPenStyle();
     if (this.lastDrawPt) {
       ctx.beginPath();
       ctx.moveTo(this.lastDrawPt.x, this.lastDrawPt.y);
@@ -320,12 +346,75 @@ export class BrowserCursor {
       ctx.stroke();
     } else {
       ctx.beginPath();
-      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = `hsl(var(--primary))`;
+      ctx.arc(x, y, ctx.lineWidth / 2, 0, Math.PI * 2);
       ctx.fill();
     }
     this.lastDrawPt = { x, y };
+    this.resetCtx();
     void this.accentColor;
+  }
+
+  private drawShapePreview(x: number, y: number) {
+    if (!this.drawCtx || !this.shapeStart) return;
+    this.restoreCanvas(this.shapeBase);
+    this.applyPenStyle();
+    const ctx = this.drawCtx;
+    const { tool } = PaintStore.get();
+    const sx = this.shapeStart.x;
+    const sy = this.shapeStart.y;
+    ctx.beginPath();
+    if (tool === "rect") {
+      ctx.strokeRect(sx, sy, x - sx, y - sy);
+    } else if (tool === "ellipse") {
+      const cx = (sx + x) / 2;
+      const cy = (sy + y) / 2;
+      const rx = Math.abs(x - sx) / 2;
+      const ry = Math.abs(y - sy) / 2;
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (tool === "line") {
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    } else if (tool === "arrow") {
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      const head = Math.max(10, ctx.lineWidth * 3);
+      const ang = Math.atan2(y - sy, x - sx);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - head * Math.cos(ang - Math.PI / 7), y - head * Math.sin(ang - Math.PI / 7));
+      ctx.lineTo(x - head * Math.cos(ang + Math.PI / 7), y - head * Math.sin(ang + Math.PI / 7));
+      ctx.closePath();
+      ctx.fill();
+    }
+    this.resetCtx();
+  }
+
+  undo() {
+    if (!this.drawCtx) return;
+    const prev = PaintHistory.undo();
+    if (prev) {
+      this.restoreCanvas(prev);
+    } else {
+      this.drawCtx.clearRect(0, 0, this.drawCanvas.width, this.drawCanvas.height);
+    }
+  }
+
+  redo() {
+    const next = PaintHistory.redo();
+    if (next) this.restoreCanvas(next);
+  }
+
+  saveAsPng() {
+    const url = this.drawCanvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `omnipoint-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   private setLabel(text: string) {
