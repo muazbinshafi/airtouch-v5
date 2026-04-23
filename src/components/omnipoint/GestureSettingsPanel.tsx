@@ -112,6 +112,96 @@ export function GestureSettingsPanel() {
             </header>
 
             <section className="p-4 border-b hairline">
+              <SectionTitle>PROFILES</SectionTitle>
+              <p className="font-mono text-[10px] text-muted-foreground mb-3 leading-relaxed">
+                Save your tuning as a named profile and switch instantly.
+              </p>
+              <div className="grid gap-1.5 mb-3">
+                {profilesState.profiles.map((p) => {
+                  const isActive = p.id === profilesState.activeId;
+                  const isBuiltin = p.id.startsWith("builtin-");
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center gap-2 border h-9 px-2 ${
+                        isActive
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <button
+                        onClick={() => GestureProfileStore.activate(p.id)}
+                        className="flex-1 text-left font-mono text-[11px] tracking-[0.15em] text-foreground truncate"
+                        title={p.name}
+                      >
+                        {isActive ? "▸ " : "  "}{p.name}
+                        {isBuiltin && (
+                          <span className="ml-1.5 text-[9px] tracking-[0.2em] text-muted-foreground">
+                            BUILT-IN
+                          </span>
+                        )}
+                      </button>
+                      {!isBuiltin && (
+                        <button
+                          onClick={() => {
+                            const n = window.prompt("Rename profile:", p.name);
+                            if (n) GestureProfileStore.rename(p.id, n);
+                          }}
+                          title="Rename"
+                          className="font-mono text-[10px] text-muted-foreground hover:text-foreground px-1"
+                        >
+                          ✎
+                        </button>
+                      )}
+                      {!isBuiltin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Delete "${p.name}"?`)) {
+                              GestureProfileStore.remove(p.id);
+                            }
+                          }}
+                          title="Delete"
+                          className="text-destructive/70 hover:text-destructive"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => GestureProfileStore.saveActive()}
+                  disabled={!activeProfile || activeProfile.id.startsWith("builtin-")}
+                  className="h-8 font-mono text-[10px] tracking-[0.25em] border border-border text-foreground hover:border-primary/60 disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
+                  title="Overwrite active profile"
+                >
+                  <Save className="w-3 h-3" /> SAVE
+                </button>
+                <button
+                  onClick={handleSaveAs}
+                  className="h-8 font-mono text-[10px] tracking-[0.25em] border border-primary text-primary hover:bg-primary/10 inline-flex items-center justify-center gap-1.5"
+                  title="Save current as new profile"
+                >
+                  <Plus className="w-3 h-3" /> SAVE AS…
+                </button>
+                <button
+                  onClick={handleExport}
+                  className="h-8 font-mono text-[10px] tracking-[0.25em] border border-border text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-3 h-3" /> EXPORT
+                </button>
+                <button
+                  onClick={handleImport}
+                  className="h-8 font-mono text-[10px] tracking-[0.25em] border border-border text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5"
+                >
+                  <Upload className="w-3 h-3" /> IMPORT
+                </button>
+              </div>
+            </section>
+
+            <section className="p-4 border-b hairline">
               <SectionTitle>OPEN PALM SCOPE</SectionTitle>
               <p className="font-mono text-[10px] text-muted-foreground mb-3 leading-relaxed">
                 Choose where the open palm gesture is active. In draw mode it
