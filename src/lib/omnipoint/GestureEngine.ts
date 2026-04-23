@@ -307,8 +307,13 @@ export class GestureEngine {
         cy2 = this.cursor.y + dy * gain;
       }
     }
-    this.cursor.x = Math.min(1, Math.max(0, cx2));
-    this.cursor.y = Math.min(1, Math.max(0, cy2));
+    // Final cursor low-pass: clamp first, then run through One-Euro for the
+    // last bit of polish (kills any residual sub-pixel jitter under stillness).
+    const rawCx = Math.min(1, Math.max(0, cx2));
+    const rawCy = Math.min(1, Math.max(0, cy2));
+    const [smCx, smCy] = this.fCursor.filter(rawCx, rawCy, tNow);
+    this.cursor.x = smCx;
+    this.cursor.y = smCy;
     this.prevIndex = { x: inZoneX, y: inZoneY, t: tNow };
 
     // Pinch distance (3D Euclidean) on smoothed landmarks
@@ -426,10 +431,36 @@ export class GestureEngine {
       }
     }
 
+    // Gesture stability voting — keep the same gesture for N frames before
+    // committing it. Pointer/click/drag/scroll are time-critical and bypass
+    // voting; static poses (open_palm/thumbs_up/etc) get the full vote.
+    const isStaticPose =
+      gesture === "open_palm" || gesture === "thumbs_up" ||
+      gesture === "pinky_only" || gesture === "four_fingers" ||
+      gesture === "fist" || gesture === "right_click";
+    let committed: GestureKind = gesture;
+    if (isStaticPose) {
+      if (gesture === this.gestureCandidate) {
+        this.gestureCandidateCount++;
+      } else {
+        this.gestureCandidate = gesture;
+        this.gestureCandidateCount = 1;
+      }
+      if (this.gestureCandidateCount >= this.gestureStabilityFrames) {
+        this.committedGesture = gesture;
+      }
+      committed = this.committedGesture === gesture ? gesture : "none";
+    } else {
+      this.gestureCandidate = gesture;
+      this.gestureCandidateCount = 0;
+      this.committedGesture = gesture;
+      committed = gesture;
+    }
+
     TelemetryStore.set({
       cursorX: this.cursor.x,
       cursorY: this.cursor.y,
-      gesture,
+      gesture: committed,
       handPresent: true,
       handedness,
       fingersExtended,
@@ -437,7 +468,7 @@ export class GestureEngine {
       pinchDistance: pinch,
     });
 
-    this.emitMotion(gesture, pressure);
+    this.emitMotion(committed, pressure);
   }
 
   private emitMotion(gesture: GestureKind, pressure: number) {
